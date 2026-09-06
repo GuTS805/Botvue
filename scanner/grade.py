@@ -52,6 +52,7 @@ class Verdict:
     statuses: dict = field(default_factory=dict)
     sizes: dict = field(default_factory=dict)
     marker_headers: dict = field(default_factory=dict)
+    differential_headers: dict = field(default_factory=dict)
     refused: list = field(default_factory=list)
     samples: list = field(default_factory=list)
 
@@ -95,6 +96,7 @@ def grade(domain: str) -> Verdict:
         v.verdict, v.reason = "baseline-failed", "browser fetch did not succeed"
         return v
 
+    baseline_headers = {k.lower() for k in (base.get("headers") or {})}
     for a, r in by_agent.items():
         if a == BASELINE or r.get("error"):
             continue
@@ -103,6 +105,15 @@ def grade(domain: str) -> Verdict:
         for k, val in (r.get("headers") or {}).items():
             if k.lower().startswith(("x-mobian", "x-agent", "x-ai-", "x-llm")):
                 v.marker_headers.setdefault(k.lower(), {})[a] = val[:60]
+
+    # A marker only means something if the browser does not also receive it. Sites that
+    # advertise their llms.txt in a header send it to everyone, which is disclosure rather
+    # than substitution — counting those produced three false findings.
+    v.differential_headers = {
+        k: agents
+        for k, agents in v.marker_headers.items()
+        if k not in baseline_headers and CONTROL not in agents
+    }
 
     base_blocks = blocks_from_response(base["body"], base["headers"].get("content-type", ""))
     base_hay = haystack(base["body"])
@@ -135,9 +146,9 @@ def grade(domain: str) -> Verdict:
         if a in v.similarity and v.similarity[a] < CRAWLER_DIVERGENT
     ]
 
-    if v.marker_headers:
+    if v.differential_headers:
         v.verdict = "header-marked"
-        v.reason = "edge tagged the response with agent-specific headers"
+        v.reason = "edge tagged crawler responses with headers the browser never receives"
     elif v.baseline_words < MIN_BASELINE_WORDS:
         v.verdict = "thin"
         v.reason = f"baseline carries only {v.baseline_words} words; not judgeable"
