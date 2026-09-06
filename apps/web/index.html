@@ -89,6 +89,9 @@ tr.hi td{background:#e7ece9}
 .tag.ok{color:var(--full);border-color:#bcd6cd;background:#eef5f2}
 
 .split{display:grid;grid-template-columns:1.05fr .95fr;gap:56px;align-items:start}
+/* Grid children default to min-width:auto and grow to their content, which lets a wide
+   table push the whole page sideways instead of scrolling inside its own box. */
+.split>*{min-width:0}
 .hash{font-family:"IBM Plex Mono",monospace;font-size:.82rem;word-break:break-all;color:var(--ink-soft)}
 
 /* Check tool */
@@ -106,6 +109,27 @@ tr.hi td{background:#e7ece9}
 .decision.block{color:var(--signal)}
 .decision.flag{color:#a86a00}
 .decision.pass{color:var(--full)}
+.examples{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 0}
+.tool .examples button{font-size:.86rem;font-weight:400;padding:7px 13px;
+  border:1px solid var(--rule);background:transparent;color:var(--ink-soft)}
+.tool .examples button:hover{border-color:var(--full);color:var(--full);background:#eef5f2}
+.cached{background:#f7f0dd;border:1px solid #ddc78d;padding:10px 13px;font-size:.88rem;
+  margin-bottom:16px}
+.evidence{margin-top:20px;border-top:1px solid var(--rule);padding-top:14px}
+.evidence summary{cursor:pointer;font-weight:600;font-size:.94rem}
+.evidence summary:hover{color:var(--full)}
+.hashrow{display:grid;grid-template-columns:130px 1fr auto;gap:12px;padding:6px 0;
+  border-bottom:1px solid var(--rule);font-size:.84rem;align-items:baseline}
+.hashrow code{font-family:"IBM Plex Mono",monospace;font-size:.78rem;color:var(--ink-soft);
+  overflow-wrap:anywhere}
+.hashrow b{font-weight:600;white-space:nowrap}
+.curl{font-family:"IBM Plex Mono",monospace;font-size:.76rem;background:var(--ink);
+  color:#dfe8e4;padding:14px;overflow-x:auto;margin:0;line-height:1.5;white-space:pre-wrap;
+  overflow-wrap:anywhere}
+/* .tool button sets the primary style, so these secondary buttons must out-specify it. */
+.tool button.copy{font-size:.84rem;font-weight:400;margin-top:10px;padding:7px 14px;
+  border:1px solid var(--rule);background:transparent;color:var(--ink-soft)}
+.tool button.copy:hover{border-color:var(--full);color:var(--full);background:transparent}
 .ratios{margin:14px 0 0;font-size:.92rem}
 .ratios div{display:flex;justify-content:space-between;gap:16px;padding:5px 0;border-bottom:1px solid var(--rule);max-width:420px}
 .bar{height:6px;background:var(--void);margin-top:6px;max-width:420px}
@@ -240,12 +264,30 @@ footer a{color:var(--ink-soft)}
                aria-label="URL to check">
         <button type="submit" id="checkBtn">Check this page</button>
       </form>
+
+      <div class="examples">
+        <button type="button" data-url="https://www.houstonchronicle.com/">An empty page, sent as success</button>
+        <button type="button" data-url="https://time.com/">Content added for crawlers only</button>
+        <button type="button" data-url="https://www.overstock.com/">Blocks everything, including Googlebot</button>
+        <button type="button" data-url="https://www.elle.com/">Serves everyone the same page</button>
+      </div>
       <p class="hint" id="hint">Six fetches, so it takes a few seconds.</p>
 
       <div class="result" id="result">
+        <div class="cached" id="cached" hidden></div>
         <div class="decision" id="decision"></div>
         <p id="explain" class="prose" style="margin-top:.6rem"></p>
         <div class="ratios" id="ratios"></div>
+
+        <details class="evidence">
+          <summary>Check this yourself</summary>
+          <p class="hint" style="margin-bottom:14px">Each response body, hashed. Fetch the
+            page with the same user-agent, hash it, and compare.</p>
+          <div id="hashes"></div>
+          <p class="hint" style="margin:16px 0 6px">Reproduce the crawler fetch:</p>
+          <pre id="curl" class="curl"></pre>
+          <button type="button" class="copy" id="copyCurl">Copy command</button>
+        </details>
       </div>
     </div>
   </section>
@@ -299,21 +341,39 @@ footer a{color:var(--ink-soft)}
   });
 })();
 
-const API = (location.origin.includes('localhost') ? location.origin : location.origin);
+const API = location.origin;
 const form = document.getElementById('checkForm');
+const input = document.getElementById('urlInput');
 const btn = document.getElementById('checkBtn');
 const hint = document.getElementById('hint');
 const result = document.getElementById('result');
+const cachedNote = document.getElementById('cached');
+
+const DEFAULT_HINT = 'Six fetches, so it takes a few seconds.';
+let userAgents = {};
+
+fetch(API + '/agents')
+  .then((r) => r.json())
+  .then((d) => { userAgents = d.userAgents || {}; })
+  .catch(() => {});
+
+document.querySelectorAll('.examples button').forEach((b) => {
+  b.addEventListener('click', () => {
+    input.value = b.dataset.url;
+    form.requestSubmit();
+  });
+});
 
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
-  const url = document.getElementById('urlInput').value.trim();
+  const url = input.value.trim();
   if (!url) return;
 
   btn.disabled = true;
   btn.textContent = 'Fetching six ways…';
   hint.textContent = 'Fetching as a browser, as Googlebot, and as four AI crawlers.';
   result.classList.remove('show');
+  cachedNote.hidden = true;
 
   try {
     const res = await fetch(API + '/check', {
@@ -328,30 +388,71 @@ form.addEventListener('submit', async (e) => {
         + terms.accepts[0].amountFormatted + ' to ' + terms.accepts[0].payTo + '.';
       return;
     }
-    if (!res.ok) throw new Error('The check returned ' + res.status + '.');
+    if (!res.ok) throw new Error('returned ' + res.status);
 
-    render(await res.json());
-    hint.textContent = 'Six fetches, so it takes a few seconds.';
+    render(await res.json(), url);
+    hint.textContent = DEFAULT_HINT;
   } catch (err) {
-    hint.textContent = 'Could not reach the checker. Start it with: uvicorn scanner.gateway:app';
+    // A live fetch can be rate-limited, and a publisher can change its configuration at
+    // any time. Fall back to what was recorded, and say plainly that it is a recording.
+    const recovered = await showCached(url);
+    hint.textContent = recovered
+      ? DEFAULT_HINT
+      : 'Could not fetch this page live, and it is not in the recorded set.';
   } finally {
     btn.disabled = false;
     btn.textContent = 'Check this page';
   }
 });
 
-function render(d) {
+async function showCached(url) {
+  let domain;
+  try { domain = new URL(url).hostname; } catch { return false; }
+
+  try {
+    const res = await fetch(API + '/evidence?domain=' + encodeURIComponent(domain));
+    if (!res.ok) return false;
+    const d = await res.json();
+
+    const when = new Date(d.capturedAt).toLocaleDateString('en-GB',
+      {day:'numeric', month:'long', year:'numeric'});
+    cachedNote.textContent = 'Live fetch was not possible just now. This is what was '
+      + 'recorded on ' + when + '. If the site has changed since, the hashes below will '
+      + 'no longer match.';
+    cachedNote.hidden = false;
+
+    const ratios = d.word_ratio || {};
+    const human = d.baseline_words || 0;
+    render({
+      decision: d.decision || 'pass',
+      verdict: d.verdict,
+      explanation: d.explanation,
+      human_words: human,
+      word_ratio: ratios,
+      statuses: Object.fromEntries(
+        Object.entries(d.agents || {}).map(([a, r]) => [a, r.status])),
+      evidence: Object.fromEntries(
+        Object.entries(d.agents || {}).map(([a, r]) => [a, r.sha256]))
+    }, url);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function render(d, url) {
   const decision = document.getElementById('decision');
   const words = {block:'Do not read this page', flag:'Read this with a warning', pass:'Safe to read'};
   decision.textContent = words[d.decision] || d.decision;
   decision.className = 'decision ' + d.decision;
 
-  document.getElementById('explain').textContent = d.explanation || d.reason;
+  document.getElementById('explain').textContent = d.explanation || d.reason || '';
 
   const ratios = document.getElementById('ratios');
   ratios.innerHTML = '';
   const human = document.createElement('div');
-  human.innerHTML = '<span>A browser</span><b>' + d.human_words.toLocaleString() + ' words</b>';
+  human.innerHTML = '<span>A browser</span><b>' + (d.human_words || 0).toLocaleString()
+    + ' words</b>';
   ratios.appendChild(human);
 
   Object.entries(d.word_ratio || {}).sort().forEach(([agent, ratio]) => {
@@ -361,7 +462,7 @@ function render(d) {
     ratios.appendChild(row);
     const bar = document.createElement('div');
     bar.className = 'bar';
-    bar.innerHTML = '<i style="width:' + Math.min(pct,100) + '%"></i>';
+    bar.innerHTML = '<i style="width:' + Math.min(pct, 100) + '%"></i>';
     ratios.appendChild(bar);
   });
 
@@ -373,8 +474,42 @@ function render(d) {
     }
   });
 
+  renderEvidence(d, url);
   result.classList.add('show');
 }
+
+function renderEvidence(d, url) {
+  const hashes = document.getElementById('hashes');
+  hashes.innerHTML = '';
+
+  const entries = Object.entries(d.evidence || {}).sort();
+  // Bodies that hash the same were served the same file. Naming that is the finding.
+  const counts = {};
+  entries.forEach(([, sha]) => { counts[sha] = (counts[sha] || 0) + 1; });
+
+  entries.forEach(([agent, sha]) => {
+    const row = document.createElement('div');
+    row.className = 'hashrow';
+    const shared = counts[sha] > 1 ? '<b>same body ×' + counts[sha] + '</b>' : '<b></b>';
+    row.innerHTML = '<span>' + agent + '</span><code>' + sha.slice(0, 32) + '…</code>' + shared;
+    hashes.appendChild(row);
+  });
+
+  const crawler = Object.keys(d.word_ratio || {}).find((a) => a !== 'googlebot') || 'gptbot';
+  const ua = userAgents[crawler] || crawler;
+  document.getElementById('curl').textContent =
+    "curl -s -H 'User-Agent: " + ua + "' \\\n  '" + url + "' | shasum -a 256";
+}
+
+document.getElementById('copyCurl').addEventListener('click', async (e) => {
+  try {
+    await navigator.clipboard.writeText(document.getElementById('curl').textContent);
+    e.target.textContent = 'Copied';
+    setTimeout(() => { e.target.textContent = 'Copy command'; }, 1600);
+  } catch {
+    e.target.textContent = 'Select the text above to copy';
+  }
+});
 </script>
 </body>
 </html>

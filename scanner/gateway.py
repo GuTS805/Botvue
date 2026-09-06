@@ -14,6 +14,7 @@ from fastapi import FastAPI, Header, Response
 from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 from pydantic import BaseModel, Field
 
+import json
 from pathlib import Path
 
 from .agents import AGENTS, BASELINE, CONTROL
@@ -25,7 +26,7 @@ from .payments import (
     terms_from_env,
     verifier_from_env,
 )
-from .service import CheckResult, check
+from .service import DECISION, EXPLANATION, CheckResult, check
 
 app = FastAPI(
     title="Botvue",
@@ -99,6 +100,45 @@ def health() -> dict:
         "agents": list(AGENTS),
         "paymentRequired": not isinstance(verifier, OpenVerifier),
     }
+
+
+@app.get("/agents", summary="The exact user-agent strings used, so a finding can be reproduced.")
+def agent_strings() -> dict:
+    return {"baseline": BASELINE, "control": CONTROL, "userAgents": dict(AGENTS)}
+
+
+@app.get(
+    "/evidence",
+    summary="A frozen observation from the scan, for when a live fetch is not possible.",
+    description="Live fetches can be rate-limited, and a publisher can change its "
+                "configuration at any time. This returns what was recorded on the date of "
+                "the scan, clearly marked as such.",
+)
+def evidence(domain: str) -> JSONResponse:
+    manifest_path = Path(__file__).resolve().parents[1] / "evidence" / "manifest.json"
+    if not manifest_path.exists():
+        return JSONResponse(status_code=404, content={"error": "no evidence archive"})
+
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    wanted = domain.lower().removeprefix("www.")
+    for record in manifest["properties"]:
+        if record["domain"].lower().removeprefix("www.") == wanted:
+            return JSONResponse(
+                content={
+                    "cached": True,
+                    "capturedAt": manifest["captured_at"],
+                    "note": manifest["note"],
+                    # The archive stores observations, not prose. The reader still needs to
+                    # be told what the verdict means.
+                    "explanation": EXPLANATION.get(record["verdict"], ""),
+                    "decision": DECISION.get(record["verdict"], "pass"),
+                    **record,
+                }
+            )
+    return JSONResponse(
+        status_code=404,
+        content={"error": f"{domain} is not in the frozen evidence set"},
+    )
 
 
 @app.get("/terms", summary="What a paid call costs and how payment is verified.")
