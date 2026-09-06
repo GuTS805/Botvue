@@ -17,6 +17,8 @@ export interface Discovered {
   urlField: string;
   /** True when the operation documents a 402, so payment is expected. */
   paid: boolean;
+  /** What the running service says, as opposed to what its spec documents. */
+  paymentRequired: boolean;
   summary: string;
 }
 
@@ -49,6 +51,17 @@ function resolveSchema(spec: any, node: any): any {
 
 export async function discover(root: string): Promise<Discovered> {
   const base = root.replace(/\/+$/, "");
+
+  // Assert what we are talking to before trusting anything it says. A stale server left
+  // holding the port once made a paid run look like it had passed when it had silently
+  // talked to an unpaid one — the kind of false pass this whole project exists to catch.
+  const health = await getJson<{ status?: string; paymentRequired?: boolean }>(
+    `${base}/health`,
+  );
+  if (health.status !== "ok") {
+    throw new Error(`${base} is not healthy: ${JSON.stringify(health)}`);
+  }
+
   const spec = await getJson<any>(`${base}/openapi.json`);
 
   for (const [path, operations] of Object.entries<any>(spec.paths ?? {})) {
@@ -69,6 +82,7 @@ export async function discover(root: string): Promise<Discovered> {
         method: method.toUpperCase(),
         urlField: field,
         paid: Boolean(operation.responses?.["402"]),
+        paymentRequired: Boolean(health.paymentRequired),
         summary: operation.summary ?? spec.info?.summary ?? "",
       };
     }

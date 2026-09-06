@@ -31,3 +31,5 @@ corpus/urls.json
 attestations/pending/
 attestations/submitted/
 gw.log
+.playwright-mcp/
+*.png

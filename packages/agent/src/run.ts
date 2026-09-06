@@ -78,7 +78,14 @@ async function main() {
 
   const found = await discover(service);
   console.log(`discovered ${found.method} ${found.endpoint}`);
-  console.log(`  takes field "${found.urlField}", payment expected: ${found.paid}\n`);
+  console.log(`  takes field "${found.urlField}", payment expected: ${found.paid}`);
+  console.log(`  service reports payment required: ${found.paymentRequired}\n`);
+
+  // Belt and braces: if the spec documents a 402 but the running service says payment is
+  // off, we are not talking to the service we think we are.
+  if (found.paid && !found.paymentRequired) {
+    console.log("  note: this service documents payment but is running open\n");
+  }
 
   let call = await callCheck(found, target);
 

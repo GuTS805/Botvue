@@ -11,8 +11,10 @@ second adapter — an MCP server, say — reuses the same code rather than reimp
 from __future__ import annotations
 
 from fastapi import FastAPI, Header, Response
-from fastapi.responses import JSONResponse, PlainTextResponse
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 from pydantic import BaseModel, Field
+
+from pathlib import Path
 
 from .agents import AGENTS, BASELINE, CONTROL
 from .attest import QueueAttestor
@@ -42,6 +44,8 @@ app = FastAPI(
         "invisible to them."
     ),
 )
+
+WEB = Path(__file__).resolve().parents[1] / "apps" / "web"
 
 attestor = QueueAttestor()
 verifier: PaymentVerifier = verifier_from_env()
@@ -79,6 +83,11 @@ class CheckResponse(BaseModel):
 
 def _to_response(result: CheckResult, payment: dict) -> CheckResponse:
     return CheckResponse(**{**result.__dict__, "payment": payment})
+
+
+@app.get("/", include_in_schema=False)
+def home() -> FileResponse:
+    return FileResponse(WEB / "index.html")
 
 
 @app.get("/health", summary="Liveness and the user-agent matrix in use.")
