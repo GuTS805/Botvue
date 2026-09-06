@@ -17,7 +17,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import httpx
 
 from .agents import AGENTS
-from .corpus import CORPUS_DIR, build
+from .corpus import CORPUS_DIR, build, build_chains
 from .fetch import TIMEOUT, fetch_one
 from .grade import RESULTS_DIR, UNJUDGEABLE, grade, report
 
@@ -43,9 +43,13 @@ def main() -> int:
     ap.add_argument("--corpus-limit", type=int, default=400)
     ap.add_argument("--articles", action="store_true",
                     help="scan publisher article URLs instead of homepages")
+    ap.add_argument("--chains", action="store_true",
+                    help="scan newspaper-chain properties for shared CDN rules")
     args = ap.parse_args()
 
-    if args.articles:
+    if args.chains:
+        entries = build_chains()[: args.limit]
+    elif args.articles:
         entries = json.loads(
             (CORPUS_DIR / "articles.json").read_text(encoding="utf-8"))[: args.limit]
     else:

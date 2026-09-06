@@ -76,6 +76,68 @@ PUBLISHERS = [
     "moneycontrol.com",
 ]
 
+# Newspaper chains deploy one CDN configuration across every property they own. If a
+# crawler rule is set at the chain level rather than per title, it is visible across the
+# whole network at once — which is what separates one publisher's choice from an industry
+# default nobody announced.
+CHAINS = {
+    "hearst": [
+        "sfgate.com", "sfchronicle.com", "houstonchronicle.com", "chron.com",
+        "timesunion.com", "expressnews.com", "mysanantonio.com", "ctpost.com",
+        "newstimes.com", "stamfordadvocate.com", "greenwichtime.com", "nhregister.com",
+        "thehour.com", "registercitizen.com", "middletownpress.com", "seattlepi.com",
+        "lmtonline.com", "mrt.com", "ourmidland.com", "theintelligencer.com",
+        "manisteenews.com", "bigrapidsnews.com",
+    ],
+    "hearst-magazines": [
+        "cosmopolitan.com", "elle.com", "esquire.com", "harpersbazaar.com",
+        "menshealth.com", "womenshealthmag.com", "runnersworld.com", "bicycling.com",
+        "popularmechanics.com", "housebeautiful.com", "delish.com", "countryliving.com",
+        "goodhousekeeping.com", "prevention.com", "roadandtrack.com", "caranddriver.com",
+        "townandcountrymag.com", "elledecor.com", "veranda.com",
+    ],
+    "gannett": [
+        "usatoday.com", "azcentral.com", "dispatch.com", "freep.com", "detroitnews.com",
+        "tennessean.com", "indystar.com", "jsonline.com", "courier-journal.com",
+        "cincinnati.com", "northjersey.com", "democratandchronicle.com",
+        "desmoinesregister.com", "statesman.com", "commercialappeal.com", "knoxnews.com",
+        "floridatoday.com", "delawareonline.com", "lohud.com", "greenvilleonline.com",
+        "clarionledger.com", "argusleader.com", "rgj.com", "coloradoan.com",
+        "elpasotimes.com",
+    ],
+    "advance": [
+        "nj.com", "cleveland.com", "al.com", "oregonlive.com", "syracuse.com",
+        "pennlive.com", "mlive.com", "masslive.com", "silive.com",
+        "lehighvalleylive.com", "nola.com", "gulflive.com",
+    ],
+    "lee": [
+        "stltoday.com", "richmond.com", "buffalonews.com", "tucson.com", "omaha.com",
+        "madison.com", "journalstar.com", "billingsgazette.com", "tulsaworld.com",
+        "roanoke.com", "thesouthern.com", "herald-review.com", "pantagraph.com",
+        "qctimes.com", "wcfcourier.com", "globegazette.com",
+    ],
+    "mcclatchy": [
+        "miamiherald.com", "kansascity.com", "charlotteobserver.com", "sacbee.com",
+        "fresnobee.com", "modbee.com", "thestate.com", "newsobserver.com",
+        "star-telegram.com", "idahostatesman.com", "tri-cityherald.com",
+        "bellinghamherald.com", "sunherald.com", "myrtlebeachonline.com",
+        "heraldsun.com",
+    ],
+}
+
+
+def build_chains() -> list[dict]:
+    entries: list[dict] = []
+    seen: set[str] = set()
+    for chain, domains in CHAINS.items():
+        for d in domains:
+            if d in seen:
+                continue
+            seen.add(d)
+            entries.append({"domain": d, "url": f"https://{d}/", "source": chain})
+    return entries
+
+
 ECOMMERCE = [
     "bestbuy.com", "target.com", "etsy.com", "ebay.com", "wayfair.com",
     "homedepot.com", "lowes.com", "ikea.com", "zappos.com", "chewy.com",
