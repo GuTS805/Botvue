@@ -7,7 +7,8 @@
     "create-topic": "tsx src/create-topic.ts",
     "attest": "tsx src/attest.ts",
     "verify": "tsx src/verify.ts",
-    "submit-pending": "tsx src/submit-pending.ts"
+    "submit-pending": "tsx src/submit-pending.ts",
+    "check-env": "tsx src/checkenv.ts"
   },
   "dependencies": {
     "@hashgraph/sdk": "^2.62.0",
