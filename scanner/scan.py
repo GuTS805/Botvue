@@ -17,9 +17,9 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import httpx
 
 from .agents import AGENTS
-from .corpus import build
+from .corpus import CORPUS_DIR, build
 from .fetch import TIMEOUT, fetch_one
-from .grade import CONTROL, MIN_MATERIAL_BLOCKS, RESULTS_DIR, grade
+from .grade import RESULTS_DIR, UNJUDGEABLE, grade, report
 
 
 def fetch_domain(entry: dict, use_cache: bool, delay: float) -> tuple[str, int]:
@@ -41,9 +41,15 @@ def main() -> int:
     ap.add_argument("--delay", type=float, default=0.6)
     ap.add_argument("--fresh", action="store_true", help="ignore cached responses")
     ap.add_argument("--corpus-limit", type=int, default=400)
+    ap.add_argument("--articles", action="store_true",
+                    help="scan publisher article URLs instead of homepages")
     args = ap.parse_args()
 
-    entries = build(args.corpus_limit)[: args.limit]
+    if args.articles:
+        entries = json.loads(
+            (CORPUS_DIR / "articles.json").read_text(encoding="utf-8"))[: args.limit]
+    else:
+        entries = build(args.corpus_limit)[: args.limit]
     print(f"fetching {len(entries)} domains x {len(AGENTS)} agents", flush=True)
 
     started = time.time()
@@ -59,29 +65,10 @@ def main() -> int:
 
     print(f"fetched in {time.time() - started:.0f}s; grading\n", flush=True)
 
-    results = [grade(e["domain"]) for e in entries]
-    by_domain = {e["domain"]: e for e in entries}
-
-    tally: dict[str, int] = {}
-    for r in results:
-        tally[r.verdict] = tally.get(r.verdict, 0) + 1
-
-    judgeable = [r for r in results
-                 if r.verdict not in ("no-data", "baseline-failed", "thin", "incomplete")]
-    confirmed = [r for r in results if r.is_confirmed]
-
-    for k, n in sorted(tally.items(), key=lambda kv: -kv[1]):
-        print(f"  {k:<18} {n}")
-
-    print(f"\nCONFIRMED: {len(confirmed)} of {len(judgeable)} judgeable "
-          f"({len(results)} scanned)")
-    for r in sorted(confirmed, key=lambda r: -max(r.material.values() or [0])):
-        agents = ", ".join(
-            f"{a}={r.similarity.get(a)}" for a, n in sorted(r.material.items())
-            if a != CONTROL and n >= MIN_MATERIAL_BLOCKS
-        )
-        src = by_domain.get(r.domain, {}).get("source", "?")
-        print(f"  {r.domain:<32} {src:<10} {r.worst:<16} {agents or r.reason[:44]}")
+    results = [grade(e["domain"], e["url"]) for e in entries]
+    judgeable = [r for r in results if r.verdict not in UNJUDGEABLE]
+    print(f"{len(judgeable)} of {len(results)} domains judgeable\n")
+    report(results)
 
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     out = RESULTS_DIR / f"scan-{time.strftime('%Y%m%d-%H%M%S')}.json"

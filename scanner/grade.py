@@ -1,13 +1,20 @@
 """Turns cached responses into verdicts.
 
-Grading is deliberately separate from fetching. The first pass graded on set overlap alone
-and produced false positives on pages where extraction yields only a handful of blocks — a
-single rotated headline was enough to drop the overlap below threshold and trip a verdict.
-Anything judged here has to survive boilerplate stripping, the raw-text haystack check and
-the classifier, and a domain whose baseline is too thin to judge is reported as such rather
-than counted either way.
+Three behaviours, one shape — what the agent read is not what a person gets:
 
-    python -m scanner.grade [--min-material N]
+  refused      the crawler is turned away with a 4xx. Honest.
+  soft-blocked the crawler gets HTTP 200 and an empty page. The agent believes it read the
+               article. Neither the agent nor the reader ever learns otherwise.
+  substituted  the crawler's version contains content the human version does not.
+
+The soft-block test is deliberately the cheapest one here: it is a ratio of extracted words
+between two responses and needs no text classification at all, so it sidesteps the whole
+markdown-versus-HTML noise problem that makes substitution hard to measure.
+
+Serving Markdown to crawlers is *not* substitution. Substitution means content the human
+version does not have, not a different representation of the same content.
+
+    python -m scanner.grade [--json]
 """
 
 from __future__ import annotations
@@ -15,7 +22,6 @@ from __future__ import annotations
 import argparse
 import json
 from dataclasses import dataclass, field
-from pathlib import Path
 
 from .agents import AGENTS, BASELINE, CONTROL
 from .classify import Classification, classify
@@ -27,41 +33,55 @@ CACHE_DIR = CORPUS_DIR / "cache"
 RESULTS_DIR = CORPUS_DIR / "results"
 
 # A page must carry some text before any comparison means anything.
-MIN_BASELINE_WORDS = 120
-# The control has to look like the human page for the comparison to say anything about the
-# AI crawlers; news pages rotate headlines between requests, so this is not 1.0.
+MIN_BASELINE_WORDS = 200
+# A response holding this fraction of the human page's words is a stub, not the article.
+STUB_WORD_RATIO = 0.15
+# ...unless it is long enough to be a real short page regardless of the ratio.
+STUB_ABSOLUTE_WORDS = 80
+# The control must look like the human page, or the comparison says nothing about the
+# crawlers. News pages rotate headlines between requests, so this is not 1.0.
 CONTROL_SAME_PAGE = 0.93
-# Below this, a crawler is not being served the human page.
+# Below this containment, the crawler is not being served the human page's content.
 CRAWLER_DIVERGENT = 0.80
 # Below this many material blocks, divergence is indistinguishable from rotating content.
 MIN_MATERIAL_BLOCKS = 3
 
 AI_AGENTS = [a for a in AGENTS if a not in (BASELINE, CONTROL)]
+UNJUDGEABLE = ("no-data", "baseline-failed", "thin", "incomplete")
 
 
 @dataclass
 class Verdict:
     domain: str
+    url: str = ""
     verdict: str = "clean"
     reason: str = ""
-    baseline_blocks: int = 0
     baseline_words: int = 0
+    statuses: dict = field(default_factory=dict)
+    sizes: dict = field(default_factory=dict)
+    word_ratio: dict = field(default_factory=dict)
     similarity: dict = field(default_factory=dict)
     material: dict = field(default_factory=dict)
     worst: str = "COSMETIC"
-    statuses: dict = field(default_factory=dict)
-    sizes: dict = field(default_factory=dict)
-    marker_headers: dict = field(default_factory=dict)
     differential_headers: dict = field(default_factory=dict)
     refused: list = field(default_factory=list)
+    soft_blocked: list = field(default_factory=list)
+    substituted: list = field(default_factory=list)
     samples: list = field(default_factory=list)
 
     @property
-    def is_confirmed(self) -> bool:
-        return self.verdict in ("confirmed", "header-marked")
+    def is_finding(self) -> bool:
+        return self.verdict in ("soft-blocked", "substituted", "refused")
+
+    @property
+    def control_clean(self) -> bool:
+        sim = self.similarity.get(CONTROL)
+        return sim is not None and sim >= CONTROL_SAME_PAGE
 
 
-def _load(domain: str) -> dict:
+def _load(domain: str, url: str | None = None) -> dict:
+    """A domain directory can hold several pages once articles are scanned as well as
+    homepages; mixing them would compare one page against another."""
     out = {}
     d = CACHE_DIR / domain
     if not d.is_dir():
@@ -71,13 +91,16 @@ def _load(domain: str) -> dict:
             rec = json.loads(p.read_text(encoding="utf-8"))
         except Exception:
             continue
-        if rec.get("variant") == "default":
-            out[rec["agent"]] = rec
+        if rec.get("variant") != "default":
+            continue
+        if url and rec.get("url") != url:
+            continue
+        out[rec["agent"]] = rec
     return out
 
 
-def grade(domain: str) -> Verdict:
-    by_agent = _load(domain)
+def grade(domain: str, url: str | None = None) -> Verdict:
+    by_agent = _load(domain, url)
     v = Verdict(domain=domain)
     if not by_agent:
         v.verdict, v.reason = "no-data", "nothing cached"
@@ -86,6 +109,7 @@ def grade(domain: str) -> Verdict:
     for a, r in by_agent.items():
         v.statuses[a] = r["status"] if not r.get("error") else "error"
         v.sizes[a] = len(r.get("body") or "")
+    v.url = next(iter(by_agent.values())).get("url", "")
 
     if len(by_agent) < len(AGENTS):
         v.verdict, v.reason = "incomplete", f"only {len(by_agent)}/{len(AGENTS)} agents cached"
@@ -96,36 +120,42 @@ def grade(domain: str) -> Verdict:
         v.verdict, v.reason = "baseline-failed", "browser fetch did not succeed"
         return v
 
+    base_hay = haystack(base["body"])
+    base_words = len(base_hay.split())
+    v.baseline_words = base_words
+    if base_words < MIN_BASELINE_WORDS:
+        v.verdict = "thin"
+        v.reason = f"baseline carries only {base_words} words; not judgeable"
+        return v
+
     baseline_headers = {k.lower() for k in (base.get("headers") or {})}
+    marker_headers: dict = {}
+    base_blocks = blocks_from_response(base["body"], base["headers"].get("content-type", ""))
+    worst = Classification.COSMETIC
+
     for a, r in by_agent.items():
         if a == BASELINE or r.get("error"):
             continue
-        if r["status"] >= 400 or r["status"] == 402:
-            v.refused.append(f"{a}:{r['status']}")
+
         for k, val in (r.get("headers") or {}).items():
             if k.lower().startswith(("x-mobian", "x-agent", "x-ai-", "x-llm")):
-                v.marker_headers.setdefault(k.lower(), {})[a] = val[:60]
+                marker_headers.setdefault(k.lower(), {})[a] = val[:60]
 
-    # A marker only means something if the browser does not also receive it. Sites that
-    # advertise their llms.txt in a header send it to everyone, which is disclosure rather
-    # than substitution — counting those produced three false findings.
-    v.differential_headers = {
-        k: agents
-        for k, agents in v.marker_headers.items()
-        if k not in baseline_headers and CONTROL not in agents
-    }
-
-    base_blocks = blocks_from_response(base["body"], base["headers"].get("content-type", ""))
-    base_hay = haystack(base["body"])
-    v.baseline_blocks = len(base_blocks)
-    v.baseline_words = len(base_hay.split())
-
-    worst = Classification.COSMETIC
-    for a, r in by_agent.items():
-        if a == BASELINE or r.get("error") or not (200 <= r["status"] < 300):
+        if r["status"] >= 400 or r["status"] == 402:
+            v.refused.append(f"{a}:{r['status']}")
             continue
+        if not (200 <= r["status"] < 300):
+            continue
+
         hay = haystack(r["body"])
+        words = len(hay.split())
+        v.word_ratio[a] = round(words / base_words, 3)
         v.similarity[a] = round(text_similarity(base_hay, hay), 3)
+
+        # Signal 1, and the cheapest: a 200 that carries almost none of the page.
+        if words < STUB_ABSOLUTE_WORDS and v.word_ratio[a] < STUB_WORD_RATIO:
+            v.soft_blocked.append(a)
+            continue
 
         blocks = blocks_from_response(r["body"], r["headers"].get("content-type", ""))
         d = compare(base_blocks, blocks, base_hay, hay)
@@ -133,66 +163,87 @@ def grade(domain: str) -> Verdict:
         v.material[a] = len(mat)
         for c in mat:
             worst = max(worst, c.classification)
-        if a != CONTROL and len(mat) >= MIN_MATERIAL_BLOCKS and not v.samples:
-            v.samples = [
-                {"agent": a, "class": c.classification.name, "text": c.block.text[:220]}
-                for c in sorted(mat, key=lambda c: -c.classification)[:4]
-            ]
+        if a != CONTROL and len(mat) >= MIN_MATERIAL_BLOCKS:
+            v.substituted.append(a)
+            if not v.samples:
+                v.samples = [
+                    {"agent": a, "class": c.classification.name, "text": c.block.text[:220]}
+                    for c in sorted(mat, key=lambda c: -c.classification)[:4]
+                ]
     v.worst = worst.name
 
-    control_sim = v.similarity.get(CONTROL)
-    divergent = [
-        a for a in AI_AGENTS
-        if a in v.similarity and v.similarity[a] < CRAWLER_DIVERGENT
-    ]
+    # A marker means nothing if the browser receives it too — that is disclosure, not
+    # substitution.
+    v.differential_headers = {
+        k: agents for k, agents in marker_headers.items()
+        if k not in baseline_headers and CONTROL not in agents
+    }
 
-    if v.differential_headers:
-        v.verdict = "header-marked"
-        v.reason = "edge tagged crawler responses with headers the browser never receives"
-    elif v.baseline_words < MIN_BASELINE_WORDS:
-        v.verdict = "thin"
-        v.reason = f"baseline carries only {v.baseline_words} words; not judgeable"
-    elif control_sim is None:
-        v.verdict = "no-control"
-        v.reason = "googlebot fetch unusable, cannot rule out ordinary cloaking"
-    elif divergent and control_sim >= CONTROL_SAME_PAGE:
-        v.verdict = "confirmed"
-        v.reason = f"googlebot got the human page ({control_sim}), divergent: " + \
-                   ", ".join(f"{a}={v.similarity[a]}" for a in divergent)
-    elif divergent:
+    ai_soft = [a for a in v.soft_blocked if a != CONTROL]
+    ai_subst = [a for a in v.substituted if a != CONTROL]
+
+    if ai_soft and v.control_clean:
+        v.verdict = "soft-blocked"
+        v.reason = ("200 with an empty page for " + ", ".join(ai_soft)
+                    + f"; googlebot got the article ({v.similarity.get(CONTROL)})")
+    elif ai_subst and v.control_clean:
+        v.verdict = "substituted"
+        v.reason = ("crawler-only content for " + ", ".join(ai_subst)
+                    + (f"; edge markers: {', '.join(v.differential_headers)}"
+                       if v.differential_headers else ""))
+    elif ai_soft or ai_subst:
         v.verdict = "all-bots-differ"
-        v.reason = f"control diverges too ({control_sim}); existing checkers would see this"
+        v.reason = f"control diverges too ({v.similarity.get(CONTROL)})"
     elif v.refused:
         v.verdict = "refused"
-        v.reason = f"crawlers refused: {', '.join(v.refused)}"
+        v.reason = "crawlers turned away: " + ", ".join(v.refused)
+    elif any(v.similarity.get(a, 1.0) < CRAWLER_DIVERGENT for a in AI_AGENTS):
+        v.verdict = "format-variant"
+        v.reason = "different representation, no crawler-only content"
     return v
 
 
-def main() -> int:
-    ap = argparse.ArgumentParser(prog="scanner.grade")
-    ap.add_argument("--json", action="store_true", help="write graded results to disk")
-    args = ap.parse_args()
-
-    domains = sorted(p.name for p in CACHE_DIR.iterdir() if p.is_dir())
-    results = [grade(d) for d in domains]
-
+def report(results: list[Verdict]) -> None:
     tally: dict[str, int] = {}
     for r in results:
         tally[r.verdict] = tally.get(r.verdict, 0) + 1
 
-    judgeable = [r for r in results if r.verdict not in
-                 ("no-data", "baseline-failed", "thin")]
-    confirmed = [r for r in results if r.is_confirmed]
-
-    print(f"graded {len(results)} domains from cache\n")
+    judgeable = [r for r in results if r.verdict not in UNJUDGEABLE]
     for k, n in sorted(tally.items(), key=lambda kv: -kv[1]):
         print(f"  {k:<18} {n}")
 
-    print(f"\nCONFIRMED: {len(confirmed)} of {len(judgeable)} judgeable domains")
-    for r in sorted(confirmed, key=lambda r: -max(r.material.values() or [0])):
-        agents = ", ".join(f"{a}:{n}" for a, n in sorted(r.material.items())
-                           if a != CONTROL and n >= MIN_MATERIAL_BLOCKS)
-        print(f"  {r.domain:<32} {r.worst:<18} {agents or r.reason[:40]}")
+    for kind, title in (
+        ("soft-blocked", "SOFT-BLOCKED — HTTP 200, empty page, agent believes it read it"),
+        ("substituted", "SUBSTITUTED — crawler-only content"),
+        ("refused", "REFUSED — honest 4xx"),
+    ):
+        hits = [r for r in results if r.verdict == kind]
+        if not hits:
+            continue
+        print(f"\n{title}: {len(hits)} of {len(judgeable)} judgeable")
+        for r in hits[:25]:
+            if kind == "soft-blocked":
+                detail = ", ".join(
+                    f"{a}={int(r.word_ratio.get(a, 0) * 100)}%" for a in r.soft_blocked
+                )
+                print(f"  {r.domain:<34} human={r.baseline_words}w  {detail}")
+            elif kind == "substituted":
+                print(f"  {r.domain:<34} {r.worst:<14} {', '.join(r.substituted)}")
+            else:
+                print(f"  {r.domain:<34} {', '.join(r.refused)}")
+        if len(hits) > 25:
+            print(f"  … {len(hits) - 25} more")
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(prog="scanner.grade")
+    ap.add_argument("--json", action="store_true")
+    args = ap.parse_args()
+
+    domains = sorted(p.name for p in CACHE_DIR.iterdir() if p.is_dir())
+    results = [grade(d) for d in domains]
+    print(f"graded {len(results)} domains from cache\n")
+    report(results)
 
     if args.json:
         RESULTS_DIR.mkdir(parents=True, exist_ok=True)

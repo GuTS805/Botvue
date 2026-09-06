@@ -20,12 +20,60 @@ LLMSTXT_INDEX = "https://llmstxt.site/"
 _LLMS_DOMAIN = re.compile(r"https?://([a-z0-9\-]+\.[a-z0-9.\-]+)/llms\.txt")
 
 PUBLISHERS = [
+    # news and general interest
     "time.com", "fortune.com", "theatlantic.com", "businessinsider.com", "axios.com",
     "vox.com", "theverge.com", "wired.com", "forbes.com", "newsweek.com",
     "usatoday.com", "nypost.com", "people.com", "sciencealert.com", "sfgate.com",
     "thedailybeast.com", "salon.com", "rollingstone.com", "variety.com", "cnet.com",
     "zdnet.com", "techcrunch.com", "engadget.com", "mashable.com", "gizmodo.com",
     "arstechnica.com", "thehill.com", "politico.com", "semafor.com", "theguardian.com",
+    "npr.org", "cbsnews.com", "nbcnews.com", "latimes.com", "chicagotribune.com",
+    "bostonglobe.com", "seattletimes.com", "denverpost.com", "mercurynews.com",
+    "miamiherald.com", "dallasnews.com", "houstonchronicle.com", "azcentral.com",
+    "oregonlive.com", "cleveland.com", "nj.com", "al.com", "pennlive.com",
+    "reuters.com", "apnews.com", "bbc.com", "aljazeera.com", "dw.com", "france24.com",
+    # magazines and long form
+    "newyorker.com", "vanityfair.com", "gq.com", "vogue.com", "esquire.com",
+    "harpersbazaar.com", "elle.com", "cosmopolitan.com", "menshealth.com",
+    "womenshealthmag.com", "runnersworld.com", "bicycling.com", "popularmechanics.com",
+    "popsci.com", "sciencenews.org", "smithsonianmag.com", "discovermagazine.com",
+    # business and finance
+    "cnbc.com", "marketwatch.com", "investopedia.com", "fool.com", "benzinga.com",
+    "thestreet.com", "kiplinger.com", "morningstar.com", "inc.com", "entrepreneur.com",
+    "fastcompany.com", "hbr.org", "economist.com", "ft.com",
+    # sport
+    "espn.com", "cbssports.com", "si.com", "bleacherreport.com", "sbnation.com",
+    "golfdigest.com", "mlb.com", "nba.com",
+    # health
+    "healthline.com", "webmd.com", "medicalnewstoday.com", "verywellhealth.com",
+    "everydayhealth.com", "mayoclinic.org", "clevelandclinic.org", "drugs.com",
+    "medscape.com", "statnews.com",
+    # food
+    "allrecipes.com", "foodnetwork.com", "epicurious.com", "seriouseats.com",
+    "bonappetit.com", "delish.com", "tasteofhome.com", "thekitchn.com",
+    "simplyrecipes.com", "food52.com",
+    # technology and how-to
+    "lifehacker.com", "howtogeek.com", "makeuseof.com", "tomshardware.com",
+    "pcworld.com", "pcmag.com", "digitaltrends.com", "androidauthority.com",
+    "9to5mac.com", "macrumors.com", "appleinsider.com", "theregister.com",
+    "phoronix.com", "slashdot.org", "venturebeat.com", "thenextweb.com",
+    "techradar.com", "tomsguide.com", "laptopmag.com", "windowscentral.com",
+    "xda-developers.com", "hackernoon.com",
+    # travel and home
+    "travelandleisure.com", "cntraveler.com", "lonelyplanet.com", "fodors.com",
+    "afar.com", "thepointsguy.com", "architecturaldigest.com", "dwell.com",
+    "apartmenttherapy.com", "housebeautiful.com", "thespruce.com", "bhg.com",
+    "hgtv.com", "realsimple.com", "marthastewart.com",
+    # entertainment and games
+    "rottentomatoes.com", "ign.com", "polygon.com", "kotaku.com", "pcgamer.com",
+    "gamespot.com", "eurogamer.net", "gamesradar.com", "vg247.com",
+    "hollywoodreporter.com", "deadline.com", "indiewire.com", "avclub.com",
+    "pitchfork.com", "billboard.com", "stereogum.com", "consequence.net", "nme.com",
+    # asia pacific and india
+    "scmp.com", "japantimes.co.jp", "straitstimes.com", "thehindu.com", "ndtv.com",
+    "hindustantimes.com", "indianexpress.com", "livemint.com", "business-standard.com",
+    "thequint.com", "scroll.in", "thewire.in", "firstpost.com", "news18.com",
+    "moneycontrol.com",
 ]
 
 ECOMMERCE = [

@@ -73,6 +73,12 @@ _INJECTION = [
                r"\b(instead of|over|rather than|always)\b", re.I),
 ]
 
+_MARKUP_RESIDUE = re.compile(
+    r"</?(table|thead|tbody|tr|th|td|div|span|a|ul|ol|li|img|figure|section|nav)\b"
+    r"|\sdata-[\w-]+=|\shref=|\ssrc=|\bclass=\"",
+    re.I,
+)
+
 _PROMOTIONAL = [
     re.compile(r"\bsponsored\b", re.I),
     re.compile(r"\bin partnership with\b", re.I),
@@ -120,6 +126,11 @@ def classify_block(block: Block) -> Classified:
     for p in _COSMETIC:
         if p.match(text):
             return Classified(block, Classification.COSMETIC, "markdown or metadata structure")
+
+    # Markup that survived extraction is a difference in representation, not in content.
+    # Serving Markdown to crawlers is legitimate; only content the human page lacks counts.
+    if _MARKUP_RESIDUE.search(text):
+        return Classified(block, Classification.COSMETIC, "markup residue, not content")
 
     # Too little prose to be a claim; almost always a fragment of layout.
     if len(block.key.split()) < 8:

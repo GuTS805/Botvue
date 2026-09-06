@@ -25,3 +25,6 @@ Thumbs.db
 .idea/
 corpus/results/
 scan_full.log
+scan_articles.log
+corpus/articles.json
+corpus/urls.json
