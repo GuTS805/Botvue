@@ -211,9 +211,25 @@ blocking a page would end this tool's credibility.
 extracted words. Across 1,483 crawler responses the distribution is bimodal — 6 below 5%,
 1,477 above 60%, and **nothing in between** — so there is no threshold to argue about.
 
+**Seven properties flip verdict between runs, and all of them are Lee Enterprises.** The
+verdict needs Googlebot to have received the human page, and Lee's homepages rotate enough
+that the control drifts across the 0.93 threshold — their control similarities sit at 0.847
+to 1.0, right on the boundary. So Lee's soft-block count moves between roughly 9 and 14
+depending on the minute you run it.
+
+This does not touch Hearst, whose control sits at 1.0 on every property and does not move.
+And it does not affect whether Lee is soft-blocking, only whether this test can say so from
+the comparison: Lee's response is a `200` whose body reads *"You are not authorized to
+access this content"*, which is self-evident without any control at all.
+
 **Intent is never asserted.** A response can be a policy, a vendor default, or a mistake.
 Nothing here distinguishes them, and the harm does not depend on which it is: an agent
 receiving `200` cannot tell any of them from success.
+
+**Re-verified 6 September, ~1 hour after the first scan.** The numbers that carry the
+argument were byte-identical on both runs: 182 TollBit responses split 126 × `402` and
+56 × `200`, and 46 Hearst stub responses. Re-run
+`.venv/Scripts/python -m scanner.scan --chains --fresh` to check it yourself.
 
 **Corrections welcome.** If a record is wrong, open an issue and it will be annotated rather
 than removed.
@@ -239,6 +255,8 @@ Every response is cached to disk, so re-grading the whole corpus costs no reques
 is what made recovering from a bad run cheap.
 
 Setup, including Hedera credentials: **[SETUP.md](SETUP.md)**
+
+Objections and the evidence that answers them: **[DEFENCE.md](DEFENCE.md)**
 
 ## Licence
 
