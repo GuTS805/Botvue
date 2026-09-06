@@ -28,3 +28,6 @@ scan_full.log
 scan_articles.log
 corpus/articles.json
 corpus/urls.json
+attestations/pending/
+attestations/submitted/
+gw.log

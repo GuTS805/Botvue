@@ -19,13 +19,36 @@ function required(name: string): string {
   return value;
 }
 
+/**
+ * The portal issues ED25519 and ECDSA keys in several encodings, and picking the wrong
+ * parser fails at client init with an error that says nothing useful. Try each in turn
+ * rather than making the operator work out which one they were given.
+ */
+function parseKey(raw: string): PrivateKey {
+  const key = raw.trim();
+  const attempts: Array<() => PrivateKey> = [
+    () => PrivateKey.fromStringDer(key),
+    () => PrivateKey.fromStringED25519(key),
+    () => PrivateKey.fromStringECDSA(key),
+  ];
+  for (const attempt of attempts) {
+    try {
+      return attempt();
+    } catch {
+      continue;
+    }
+  }
+  throw new Error(
+    "HEDERA_PRIVATE_KEY could not be parsed as a DER, ED25519 or ECDSA key. Copy the " +
+      '"DER Encoded Private Key" from portal.hedera.com.',
+  );
+}
+
 export function loadConfig(): ChainConfig {
   const network = (process.env.HEDERA_NETWORK ?? "testnet") as "testnet" | "mainnet";
   return {
     accountId: AccountId.fromString(required("HEDERA_ACCOUNT_ID")),
-    // ECDSA and ED25519 keys are both issued by the portal, so accept either rather than
-    // making the operator care which one they were given.
-    privateKey: PrivateKey.fromStringDer(required("HEDERA_PRIVATE_KEY")),
+    privateKey: parseKey(required("HEDERA_PRIVATE_KEY")),
     network,
     topicId: process.env.HEDERA_TOPIC_ID,
   };
