@@ -70,7 +70,8 @@ async function main() {
     }
     if (!live) continue;
 
-    for (const agent of [...a.agents, "googlebot"]) {
+    // The control is always worth re-checking, but it is often already in the list.
+    for (const agent of [...new Set([...a.agents, "googlebot"])]) {
       const recorded = a.bodies[agent];
       if (!recorded) continue;
       const now = await fetchAs(a.url, agent);

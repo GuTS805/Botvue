@@ -15,6 +15,7 @@ from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 from pydantic import BaseModel, Field
 
 import json
+import os
 from pathlib import Path
 
 from .agents import AGENTS, BASELINE, CONTROL
@@ -93,8 +94,15 @@ def home() -> FileResponse:
 
 @app.get("/health", summary="Liveness and the user-agent matrix in use.")
 def health() -> dict:
+    topic = os.getenv("HEDERA_TOPIC_ID", "")
+    network = os.getenv("HEDERA_NETWORK", "testnet")
     return {
         "status": "ok",
+        "topicId": topic,
+        "topicUrl": (
+            f"https://{network}.mirrornode.hedera.com/api/v1/topics/{topic}/messages"
+            if topic else ""
+        ),
         "baseline": BASELINE,
         "control": CONTROL,
         "agents": list(AGENTS),

@@ -292,6 +292,28 @@ footer a{color:var(--ink-soft)}
     </div>
   </section>
 
+  <section id="record" hidden>
+    <div class="split">
+      <div class="prose">
+        <h2>Written where nobody can quietly revert it</h2>
+        <p>These responses are served with <span class="mono">cache-control: no-store</span>,
+          so nothing is archived and a configuration can change in an afternoon. Each finding
+          is written to a Hedera consensus topic with its response hashes, which fixes the
+          moment it was observed.</p>
+        <p>The topic has <strong>no submit key</strong>. Anyone can append to it, including a
+          publisher who disagrees with a finding. A record only this project could write to
+          would prove only that this project wrote something down.</p>
+      </div>
+      <div>
+        <p class="hint" style="margin:0 0 6px">Consensus topic</p>
+        <p class="hash" id="topicId" style="font-size:1rem;margin-bottom:14px"></p>
+        <p><a id="topicLink" href="#" rel="noopener">Read the record yourself</a></p>
+        <p class="hint">Served by Hedera’s public mirror node. No account, no key, and
+          nothing served by us.</p>
+      </div>
+    </div>
+  </section>
+
   <section>
     <div class="split">
       <div class="prose">
@@ -355,6 +377,18 @@ let userAgents = {};
 fetch(API + '/agents')
   .then((r) => r.json())
   .then((d) => { userAgents = d.userAgents || {}; })
+  .catch(() => {});
+
+// The record section only appears once findings are actually anchored somewhere.
+fetch(API + '/health')
+  .then((r) => r.json())
+  .then((d) => {
+    if (!d.topicId) return;
+    document.getElementById('topicId').textContent = d.topicId;
+    const link = document.getElementById('topicLink');
+    link.href = d.topicUrl;
+    document.getElementById('record').hidden = false;
+  })
   .catch(() => {});
 
 document.querySelectorAll('.examples button').forEach((b) => {
