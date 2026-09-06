@@ -26,14 +26,17 @@ And in one case the two behaviours sit inside the same company:
 | Publisher group | Properties | AI crawlers receive | Status |
 |---|---|---|---|
 | Hearst **newspapers** | 22 | an empty challenge page | `200` |
-| Lee Enterprises | 9 | a "not authorized" message | `200` |
+| Lee Enterprises | 9–14 | a "not authorized" message | `200` |
 | Gannett | 24 | a refusal | `402` |
 | Advance Local | 11 | a refusal | `403` |
 | Hearst **magazines** | 19 | the article | `200` |
 | McClatchy | 15 | the article | `200` |
 
 Googlebot receives the real article on **every** soft-blocking property. Existing cloaking
-checkers compare Googlebot against a browser, so all 32 come back clean.
+checkers compare Googlebot against a browser, so all of them come back clean.
+
+Hearst is exact and repeatable. Lee moves between runs for a reason described under
+[Limitations](#limitations).
 
 ---
 
@@ -164,7 +167,7 @@ curl -X POST localhost:8000/check -H 'content-type: application/json' \
   "verdict": "soft-blocked",
   "explanation": "This page returned HTTP 200 to AI crawlers with almost none of its content...",
   "word_ratio": {"gptbot": 0.031, "googlebot": 1.0},
-  "evidence": {"gptbot": "32ed63159c77…", "googlebot": "4f50a45fd38e…"}
+  "evidence": {"gptbot": "32ed63159c77…", "googlebot": "<changes between fetches>"}
 }
 ```
 
