@@ -422,6 +422,12 @@ form.addEventListener('submit', async (e) => {
         + terms.accepts[0].amountFormatted + ' to ' + terms.accepts[0].payTo + '.';
       return;
     }
+    // A bad address is the caller's to fix; no recording will help, so say what is wrong.
+    if (res.status === 400) {
+      const body = await res.json();
+      hint.textContent = body.error || 'That is not a web address.';
+      return;
+    }
     if (!res.ok) throw new Error('returned ' + res.status);
 
     render(await res.json(), url);
@@ -432,7 +438,8 @@ form.addEventListener('submit', async (e) => {
     const recovered = await showCached(url);
     hint.textContent = recovered
       ? DEFAULT_HINT
-      : 'Could not fetch this page live, and it is not in the recorded set.';
+      : 'Could not fetch this page as a browser, so there is nothing to compare against. '
+        + 'It is not in the recorded set either.';
   } finally {
     btn.disabled = false;
     btn.textContent = 'Check this page';

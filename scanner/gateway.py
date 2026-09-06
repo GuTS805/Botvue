@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field
 import json
 import os
 from pathlib import Path
+from urllib.parse import urlparse
 
 from .agents import AGENTS, BASELINE, CONTROL
 from .attest import QueueAttestor
@@ -81,6 +82,28 @@ class CheckResponse(BaseModel):
     attestation: dict
     payment: dict = Field(default_factory=dict)
     elapsed_ms: int
+
+
+def normalise_url(raw: str) -> tuple[str, str | None]:
+    """Returns the URL to fetch, or an explanation of why it cannot be one.
+
+    Someone typing a bare domain into the box means a website, so that is accepted and
+    completed. Anything that is not a web address is refused outright rather than answered
+    with an empty result.
+    """
+    candidate = (raw or "").strip()
+    if not candidate:
+        return "", "No URL given."
+    if "://" not in candidate:
+        candidate = "https://" + candidate
+
+    parsed = urlparse(candidate)
+    if parsed.scheme not in ("http", "https"):
+        return "", f"Only http and https can be checked, not {parsed.scheme!r}."
+    host = parsed.hostname or ""
+    if "." not in host or host.startswith(".") or host.endswith("."):
+        return "", f"{raw!r} is not a web address. Try something like example.com."
+    return candidate, None
 
 
 def _to_response(result: CheckResult, payment: dict) -> CheckResponse:
@@ -189,6 +212,24 @@ def check_url(
             content={**terms.challenge(), "error": settlement.reason},
         )
 
-    result = check(req.url, fresh=req.fresh, attestor=attestor)
+    target, problem = normalise_url(req.url)
+    if problem:
+        # A tool that reports on misleading status codes does not get to answer 200 to a
+        # request it could not carry out.
+        return JSONResponse(status_code=400, content={"error": problem, "url": req.url})
+
+    result = check(target, fresh=req.fresh, attestor=attestor)
+
+    if result.verdict in ("baseline-failed", "no-data"):
+        return JSONResponse(
+            status_code=502,
+            content={
+                "error": "Could not fetch this page as a browser, so there is nothing to "
+                         "compare against.",
+                "url": target,
+                "statuses": result.statuses,
+            },
+        )
+
     response.headers["X-PAYMENT-RESPONSE"] = str(settlement.ok).lower()
     return _to_response(result, settlement.receipt())

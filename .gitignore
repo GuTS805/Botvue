@@ -33,3 +33,5 @@ attestations/submitted/
 gw.log
 .playwright-mcp/
 *.png
+corpus/cache-*/
+evidence/manifest-*.json
