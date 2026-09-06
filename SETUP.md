@@ -83,8 +83,8 @@ cp .env.example .env
 Fill in `.env`:
 
 ```
-HEDERA_ACCOUNT_ID=0.0.12345
-HEDERA_PRIVATE_KEY=<the DER encoded key>
+HEDERA_ACCOUNT_ID=0.0.10393175
+HEDERA_PRIVATE_KEY=0x2f96...
 HEDERA_NETWORK=testnet
 HEDERA_TOPIC_ID=
 ```
