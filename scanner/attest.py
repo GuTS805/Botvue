@@ -56,7 +56,17 @@ class Attestation:
 
     @property
     def id(self) -> str:
-        return hashlib.sha256(self.canonical().encode()).hexdigest()[:16]
+        """Identity is what was observed, not when it was written down.
+
+        `observedAt` is deliberately excluded. Checking the same unchanged page an hour later
+        is the same observation and must not queue a second record; a page that has actually
+        changed produces different body hashes and so a different id.
+        """
+        identifying = json.loads(self.canonical())
+        identifying.pop("observedAt", None)
+        return hashlib.sha256(
+            json.dumps(identifying, separators=(",", ":")).encode()
+        ).hexdigest()[:16]
 
 
 @dataclass

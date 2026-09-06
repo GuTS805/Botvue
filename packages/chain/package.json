@@ -8,7 +8,8 @@
     "attest": "tsx src/attest.ts",
     "verify": "tsx src/verify.ts",
     "submit-pending": "tsx src/submit-pending.ts",
-    "check-env": "tsx src/checkenv.ts"
+    "check-env": "tsx src/checkenv.ts",
+    "create-payee": "tsx src/create-payee.ts"
   },
   "dependencies": {
     "@hashgraph/sdk": "^2.62.0",

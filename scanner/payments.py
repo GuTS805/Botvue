@@ -115,10 +115,16 @@ class MirrorNodeVerifier:
     Checks that the transaction succeeded, credited the expected account with at least the
     asking price, and is recent. Spent transaction ids are remembered so one payment buys
     one call.
+
+    A transaction reaches consensus before the mirror node has indexed it, so a payment that
+    was just made can be briefly absent. Treating that as "not found" would reject a valid
+    payment, so a miss is retried for a few seconds before it is believed.
     """
 
     spent: set[str] = field(default_factory=set)
     timeout: float = 12.0
+    lookup_attempts: int = 5
+    lookup_backoff: float = 1.5
 
     def verify(self, proof: str | None, terms: PaymentTerms) -> PaymentResult:
         if not proof:
@@ -137,21 +143,33 @@ class MirrorNodeVerifier:
         lookup = _mirror_id(tx_id)
 
         url = f"{MIRROR.get(terms.network, MIRROR['testnet'])}/api/v1/transactions/{lookup}"
-        try:
-            response = httpx.get(url, timeout=self.timeout)
-        except Exception as exc:
-            return PaymentResult(False, f"could not reach the mirror node: {exc}", tx_id)
+        tx = None
+        for attempt in range(self.lookup_attempts):
+            try:
+                response = httpx.get(url, timeout=self.timeout)
+            except Exception as exc:
+                return PaymentResult(False, f"could not reach the mirror node: {exc}", tx_id)
 
-        if response.status_code == 404:
-            return PaymentResult(False, "transaction not found on the mirror node", tx_id)
-        if response.status_code != 200:
-            return PaymentResult(False, f"mirror node returned {response.status_code}", tx_id)
+            if response.status_code == 200:
+                transactions = response.json().get("transactions") or []
+                if transactions:
+                    tx = transactions[0]
+                    break
+            elif response.status_code not in (404, 400):
+                return PaymentResult(
+                    False, f"mirror node returned {response.status_code}", tx_id
+                )
 
-        transactions = response.json().get("transactions") or []
-        if not transactions:
-            return PaymentResult(False, "transaction not found", tx_id)
+            if attempt < self.lookup_attempts - 1:
+                time.sleep(self.lookup_backoff * (attempt + 1))
 
-        tx = transactions[0]
+        if tx is None:
+            return PaymentResult(
+                False,
+                "transaction not found on the mirror node after "
+                f"{self.lookup_attempts} attempts",
+                tx_id,
+            )
         if tx.get("result") != "SUCCESS":
             return PaymentResult(False, f"transaction did not succeed: {tx.get('result')}", tx_id)
 
@@ -184,8 +202,11 @@ class OpenVerifier:
 
 
 def terms_from_env() -> PaymentTerms:
+    # The service is paid into its own account. Falling back to HEDERA_ACCOUNT_ID is only
+    # for a single-account setup, where a caller using the same account cannot produce a
+    # verifiable payment because paying yourself credits nobody.
     return PaymentTerms(
-        recipient=os.getenv("HEDERA_ACCOUNT_ID", ""),
+        recipient=os.getenv("BOTVUE_PAYEE_ACCOUNT_ID") or os.getenv("HEDERA_ACCOUNT_ID", ""),
         price_tinybar=int(os.getenv("BOTVUE_PRICE_TINYBAR", DEFAULT_PRICE_TINYBAR)),
         network=os.getenv("HEDERA_NETWORK", "testnet"),
     )
