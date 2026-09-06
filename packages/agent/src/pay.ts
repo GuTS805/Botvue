@@ -28,18 +28,27 @@ export interface Payment {
 
 function parseKey(raw: string): PrivateKey {
   const key = raw.trim();
-  for (const attempt of [
-    () => PrivateKey.fromStringDer(key),
-    () => PrivateKey.fromStringED25519(key),
-    () => PrivateKey.fromStringECDSA(key),
-  ]) {
+  // An ECDSA account's key comes from the portal 0x-prefixed, which no parser accepts.
+  const bare = key.replace(/^0x/i, "");
+  const looksDer = /^30[0-9a-f]{2}/i.test(bare) && bare.length > 70;
+  const attempts = looksDer
+    ? [() => PrivateKey.fromStringDer(bare)]
+    : [
+        () => PrivateKey.fromStringECDSA(bare),
+        () => PrivateKey.fromStringED25519(bare),
+        () => PrivateKey.fromStringDer(bare),
+      ];
+  for (const attempt of attempts) {
     try {
       return attempt();
     } catch {
       continue;
     }
   }
-  throw new Error("HEDERA_PRIVATE_KEY could not be parsed");
+  throw new Error(
+    'HEDERA_PRIVATE_KEY could not be parsed. Copy the "HEX Encoded Private Key" from ' +
+      "portal.hedera.com.",
+  );
 }
 
 export function payerClient(network: string): { client: Client; accountId: AccountId } {

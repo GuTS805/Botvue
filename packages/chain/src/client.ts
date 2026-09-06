@@ -26,11 +26,19 @@ function required(name: string): string {
  */
 function parseKey(raw: string): PrivateKey {
   const key = raw.trim();
-  const attempts: Array<() => PrivateKey> = [
-    () => PrivateKey.fromStringDer(key),
-    () => PrivateKey.fromStringED25519(key),
-    () => PrivateKey.fromStringECDSA(key),
-  ];
+  // The portal shows an ECDSA account's key as "HEX Encoded Private Key" with an 0x prefix,
+  // which none of the parsers accept, so try the bare form too.
+  const bare = key.replace(/^0x/i, "");
+  // A DER string carries its own prefix and is longer than a raw 32-byte key. Matching on
+  // that first keeps the SDK from warning about a lenient parse it did not need to make.
+  const looksDer = /^30[0-9a-f]{2}/i.test(bare) && bare.length > 70;
+  const attempts: Array<() => PrivateKey> = looksDer
+    ? [() => PrivateKey.fromStringDer(bare)]
+    : [
+        () => PrivateKey.fromStringECDSA(bare),
+        () => PrivateKey.fromStringED25519(bare),
+        () => PrivateKey.fromStringDer(bare),
+      ];
   for (const attempt of attempts) {
     try {
       return attempt();
@@ -39,8 +47,9 @@ function parseKey(raw: string): PrivateKey {
     }
   }
   throw new Error(
-    "HEDERA_PRIVATE_KEY could not be parsed as a DER, ED25519 or ECDSA key. Copy the " +
-      '"DER Encoded Private Key" from portal.hedera.com.',
+    "HEDERA_PRIVATE_KEY could not be parsed. Copy the whole value of either the " +
+      '"HEX Encoded Private Key" or "DER Encoded Private Key" field on ' +
+      "portal.hedera.com — not the EVM address and not the public key.",
   );
 }
 

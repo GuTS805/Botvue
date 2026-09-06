@@ -62,13 +62,16 @@ single URL without the service:
 
 1. Go to <https://portal.hedera.com> and sign up.
 2. Create a **testnet** account. Testnet HBAR is free and the portal will top it up again.
-3. Copy two things:
-   - **Account ID** — looks like `0.0.12345`
-   - **DER Encoded Private Key** — a long hex string
+3. Copy two things from the dashboard:
+   - **Account ID** — looks like `0.0.10393175`
+   - **HEX Encoded Private Key** — starts with `0x`
 
-The portal shows both ECDSA and ED25519 keys. Either works; the code tries DER, then
-ED25519, then ECDSA, and tells you which field to copy if none parse. Prefer the one
-labelled **DER Encoded Private Key**.
+An ECDSA account (the portal's default) shows a *HEX Encoded Private Key*; an ED25519
+account shows a *DER Encoded Private Key*. Either works, with or without the `0x` prefix —
+paste the whole value. Do not use the **EVM Address**: that is a public address, not a key.
+
+An ECDSA account is the better default here, since it is the one compatible with smart
+contract tooling.
 
 ### Configure
 
@@ -194,8 +197,9 @@ Get-NetTCPConnection -State Listen -LocalPort 8000 |
 this; if you are querying by hand, convert it yourself. The wrong format returns 400, not
 404, so it reads as a malformed payment rather than a missing one.
 
-**`HEDERA_PRIVATE_KEY could not be parsed`.** Copy the field labelled *DER Encoded Private
-Key* from the portal, not the raw hex or the public key.
+**`HEDERA_PRIVATE_KEY could not be parsed`.** Copy the whole *HEX Encoded Private Key* (or
+*DER Encoded Private Key* on an ED25519 account). The `0x` prefix is fine. The **EVM
+Address** is not a key and will not work.
 
 **A check on a real site times out.** Cloudflare and Fastly rate-limit repeated probes.
 Results are cached, and the public page falls back to the recorded observation with the date
