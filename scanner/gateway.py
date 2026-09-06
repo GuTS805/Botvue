@@ -1,11 +1,7 @@
-"""The gateway an agent calls before trusting a page.
+"""HTTP adapter for the check.
 
-Walking skeleton: request in, verdict out, attestation queued. It fetches the URL as a
-browser, as Googlebot and as the AI crawlers, grades the result, and answers with a decision.
-
-The decision that matters is `block` on a soft-block. A crawler that receives HTTP 200 and a
-stub has, from the agent's point of view, succeeded — so passing that body through is the
-harm itself. Saying "this is not the page" is the whole job.
+All logic lives in `scanner.service`; this module is transport and payment only, so a
+second adapter — an MCP server, say — reuses the same code rather than reimplementing it.
 
     uvicorn scanner.gateway:app --reload
     curl -X POST localhost:8000/check -H 'content-type: application/json' \
@@ -14,133 +10,128 @@ harm itself. Saying "this is not the page" is the whole job.
 
 from __future__ import annotations
 
-import time
-from urllib.parse import urlparse
-
-import httpx
-from fastapi import FastAPI
+from fastapi import FastAPI, Header, Response
+from fastapi.responses import JSONResponse, PlainTextResponse
 from pydantic import BaseModel, Field
 
 from .agents import AGENTS, BASELINE, CONTROL
-from .attest import Attestor, QueueAttestor, build as build_attestation
-from .fetch import TIMEOUT, fetch_one
-from .grade import grade
+from .attest import QueueAttestor
+from .payments import (
+    OpenVerifier,
+    PaymentTerms,
+    PaymentVerifier,
+    terms_from_env,
+    verifier_from_env,
+)
+from .service import CheckResult, check
 
-app = FastAPI(title="Botvue", version="0.1.0")
-attestor: Attestor = QueueAttestor()
+app = FastAPI(
+    title="Botvue",
+    version="0.1.0",
+    summary="Reports what a website serves to AI crawlers that it does not serve to people.",
+    description=(
+        "Fetches one URL as a browser, as Googlebot, and as each major AI crawler, then "
+        "compares the responses.\n\n"
+        "Three behaviours are reported. A site may **refuse** a crawler with a 4xx, which is "
+        "honest and needs no action. It may **soft-block**: answer HTTP 200 with a page "
+        "carrying almost none of the content, so the agent believes it read the article when "
+        "it read nothing. Or it may **substitute**: serve the crawler content the human "
+        "version does not contain.\n\n"
+        "Googlebot is the control. Existing cloaking checkers compare Googlebot against a "
+        "browser, so a site that treats Googlebot normally and AI crawlers differently is "
+        "invisible to them."
+    ),
+)
 
-# Honest refusal is not a finding for the caller: a 4xx already tells the agent it got
-# nothing. Only responses that look like success need a decision.
-DECISION = {
-    "soft-blocked": "block",
-    "substituted": "flag",
-    "crawler-only-text": "pass",
-    "all-bots-differ": "flag",
-    "format-variant": "pass",
-    "refused": "pass",
-    "clean": "pass",
-}
-
-EXPLANATION = {
-    "soft-blocked": (
-        "This page returned HTTP 200 to AI crawlers with almost none of its content. "
-        "A browser and Googlebot receive the full page. Treating this response as the "
-        "article would mean reporting on something that was never read."
-    ),
-    "substituted": (
-        "AI crawlers receive content that is not present in the version served to a "
-        "browser."
-    ),
-    "all-bots-differ": (
-        "Crawlers receive different content, but so does Googlebot, so this is not "
-        "specific to AI agents."
-    ),
-    "crawler-only-text": (
-        "AI crawlers receive some text the browser version does not contain, but nothing "
-        "identifies it as promotional or instructional. Reported, not acted on: at this "
-        "signal's measured precision, acting would mean blocking pages over navigation "
-        "markup."
-    ),
-    "refused": "Crawlers were refused with a 4xx. The refusal is visible to the caller.",
-    "format-variant": "Crawlers receive the same content in a different format.",
-    "clean": "Crawlers and the browser receive the same content.",
-}
+attestor = QueueAttestor()
+verifier: PaymentVerifier = verifier_from_env()
+terms: PaymentTerms = terms_from_env()
 
 
 class CheckRequest(BaseModel):
-    url: str
-    fresh: bool = Field(default=False, description="bypass the response cache")
-    attest: bool = True
+    url: str = Field(description="Absolute URL to check.",
+                     examples=["https://www.houstonchronicle.com/"])
+    fresh: bool = Field(default=False, description="Bypass the response cache and refetch.")
 
 
 class CheckResponse(BaseModel):
     url: str
-    decision: str
-    verdict: str
-    rule: str | None
-    explanation: str
+    domain: str
+    decision: str = Field(description="block, flag or pass. `block` means the crawler "
+                                      "response would be mistaken for the page.")
+    verdict: str = Field(description="soft-blocked, substituted, crawler-only-text, "
+                                     "refused, format-variant or clean.")
+    rule: str | None = Field(description="Which test produced the verdict.")
+    explanation: str = Field(description="What this means, in plain language.")
     reason: str
-    human_words: int
-    word_ratio: dict
-    control_similarity: float | None
+    human_words: int = Field(description="Words of visible text a browser receives.")
+    word_ratio: dict = Field(description="Words each crawler received, as a fraction of "
+                                         "what the browser received.")
+    control_similarity: float | None = Field(description="How closely Googlebot matched the "
+                                                         "browser. 1.0 is identical.")
     statuses: dict
-    evidence: dict
+    evidence: dict = Field(description="SHA-256 of each response body, so the finding can "
+                                       "be rechecked later or by someone else.")
     attestation: dict
+    payment: dict = Field(default_factory=dict)
     elapsed_ms: int
 
 
-def _rule_for(v) -> str | None:
-    if v.soft_blocked:
-        return "size-ratio"
-    if v.verdict == "refused":
-        return "status-code"
-    if v.substituted:
-        return "block-diff"
-    return None
+def _to_response(result: CheckResult, payment: dict) -> CheckResponse:
+    return CheckResponse(**{**result.__dict__, "payment": payment})
 
 
-@app.get("/health")
+@app.get("/health", summary="Liveness and the user-agent matrix in use.")
 def health() -> dict:
-    return {"status": "ok", "agents": list(AGENTS)}
+    return {
+        "status": "ok",
+        "baseline": BASELINE,
+        "control": CONTROL,
+        "agents": list(AGENTS),
+        "paymentRequired": not isinstance(verifier, OpenVerifier),
+    }
 
 
-@app.post("/check", response_model=CheckResponse)
-def check(req: CheckRequest) -> CheckResponse:
-    started = time.perf_counter()
-    host = urlparse(req.url).hostname or req.url
+@app.get("/terms", summary="What a paid call costs and how payment is verified.")
+def payment_terms() -> dict:
+    return terms.challenge()
 
-    bodies: dict[str, str] = {}
-    for agent in AGENTS:
-        with httpx.Client(http2=True, follow_redirects=True, timeout=TIMEOUT) as client:
-            f = fetch_one(client, req.url, agent, "default", use_cache=not req.fresh)
-        if not f.error:
-            bodies[agent] = f.body_sha
 
-    verdict = grade(host, req.url)
-    rule = _rule_for(verdict)
-    decision = DECISION.get(verdict.verdict, "pass")
-
-    receipt = {"status": "skipped", "id": None}
-    # Only findings are worth anchoring; a clean page has nothing anyone would later deny.
-    if req.attest and rule and verdict.verdict not in ("clean", "format-variant"):
-        agents = verdict.soft_blocked or verdict.substituted or [
-            r.split(":")[0] for r in verdict.refused
-        ]
-        attestation = build_attestation(verdict, req.url, rule, agents, bodies)
-        receipt = attestor.submit(attestation).__dict__
-
-    return CheckResponse(
-        url=req.url,
-        decision=decision,
-        verdict=verdict.verdict,
-        rule=rule,
-        explanation=EXPLANATION.get(verdict.verdict, ""),
-        reason=verdict.reason,
-        human_words=verdict.baseline_words,
-        word_ratio=verdict.word_ratio,
-        control_similarity=verdict.similarity.get(CONTROL),
-        statuses=verdict.statuses,
-        evidence=bodies,
-        attestation=receipt,
-        elapsed_ms=int((time.perf_counter() - started) * 1000),
+@app.get("/llms.txt", response_class=PlainTextResponse, include_in_schema=False)
+def llms_txt() -> str:
+    # Served identically to every user-agent, which given the subject matter is the least
+    # this project can do.
+    return (
+        "# Botvue\n\n"
+        "> Reports what a website serves to AI crawlers that it does not serve to people.\n\n"
+        "This file is served identically to every user-agent.\n\n"
+        "## API\n"
+        "- POST /check {\"url\": \"...\"} - check one URL\n"
+        "- GET /terms - payment terms for a paid call\n"
+        "- GET /openapi.json - full specification\n"
     )
+
+
+@app.post(
+    "/check",
+    response_model=CheckResponse,
+    summary="Check one URL for content served only to AI crawlers.",
+    responses={402: {"description": "Payment required. The body describes what would satisfy it."}},
+)
+def check_url(
+    req: CheckRequest,
+    response: Response,
+    x_payment: str | None = Header(default=None, alias="X-PAYMENT"),
+) -> CheckResponse | JSONResponse:
+    settlement = verifier.verify(x_payment, terms)
+    if not settlement.ok:
+        # 402 means 402 here. The point of the tool is that a status code should describe
+        # what actually happened.
+        return JSONResponse(
+            status_code=402,
+            content={**terms.challenge(), "error": settlement.reason},
+        )
+
+    result = check(req.url, fresh=req.fresh, attestor=attestor)
+    response.headers["X-PAYMENT-RESPONSE"] = str(settlement.ok).lower()
+    return _to_response(result, settlement.receipt())
