@@ -1,0 +1,14 @@
+httpx[http2]==0.28.1
+beautifulsoup4==4.15.0
+lxml==6.1.3
+trafilatura==2.2.0
+rapidfuzz==3.14.6
+
+# Not optional. Without these, a site serving a compressed response hands back bytes that
+# decode to nonsense, and two nonsense bodies compare as total divergence — which reads as a
+# spectacular finding and is not one.
+brotli==1.2.0
+zstandard==0.25.0
+
+fastapi==0.141.1
+uvicorn[standard]==0.52.4
