@@ -16,6 +16,10 @@ from .normalize import Block
 # Below this, two blocks are different content rather than the same block reworded.
 NEAR_MATCH_THRESHOLD = 88.0
 
+# A block sharing this share of its words with the other side is a rewording of what is
+# already there, not content that side lacks.
+VOCAB_OVERLAP = 0.92
+
 
 @dataclass
 class Divergence:
@@ -39,6 +43,7 @@ class Divergence:
 def _unmatched(
     source: list[Block], against: list[Block], haystack: str = ""
 ) -> list[Block]:
+    vocabulary = set(haystack.split()) if haystack else set()
     if not source:
         return []
 
@@ -53,6 +58,13 @@ def _unmatched(
         # appears anywhere in that side's raw visible text, it is not machine-only.
         if haystack and block.key in haystack:
             continue
+        # Cheap gate before the expensive one: a block whose words are nearly all present
+        # in the other side's vocabulary is a rewording, not new content. This skips the
+        # per-block fuzzy sweep for the vast majority of blocks.
+        if vocabulary:
+            words = set(block.key.split())
+            if words and len(words & vocabulary) / len(words) >= VOCAB_OVERLAP:
+                continue
         if candidates:
             best = process.extractOne(
                 block.key,

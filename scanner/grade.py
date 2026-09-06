@@ -22,6 +22,7 @@ from __future__ import annotations
 import argparse
 import json
 from dataclasses import dataclass, field
+from urllib.parse import urlparse
 
 from .agents import AGENTS, BASELINE, CONTROL
 from .classify import Classification, classify
@@ -83,7 +84,12 @@ def _load(domain: str, url: str | None = None) -> dict:
     """A domain directory can hold several pages once articles are scanned as well as
     homepages; mixing them would compare one page against another."""
     out = {}
-    d = CACHE_DIR / domain
+    # Responses are cached under the URL's own hostname, which is not always the corpus
+    # domain: an article at www.example.com belongs to the entry for example.com.
+    host = urlparse(url).hostname if url else None
+    d = CACHE_DIR / (host or domain)
+    if not d.is_dir():
+        d = CACHE_DIR / domain
     if not d.is_dir():
         return out
     for p in d.glob("*.json"):
