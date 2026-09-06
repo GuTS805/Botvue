@@ -188,15 +188,27 @@ def grade(domain: str, url: str | None = None) -> Verdict:
     ai_soft = [a for a in v.soft_blocked if a != CONTROL]
     ai_subst = [a for a in v.substituted if a != CONTROL]
 
+    # Unmatched text alone is not enough to call something substitution. Measured against
+    # hand-checked samples it is right about 58% of the time — navigation rails and Markdown
+    # frontmatter survive extraction differently on each side and look like new content.
+    # A confirmed substitution needs evidence of *what kind* of content it is: an explicit
+    # promotional marker, an instruction aimed at the reader, or an edge header the browser
+    # never receives. Everything else is reported as unclassified rather than counted.
+    marked = worst >= Classification.PROMOTIONAL or bool(v.differential_headers)
+
     if ai_soft and v.control_clean:
         v.verdict = "soft-blocked"
         v.reason = ("200 with an empty page for " + ", ".join(ai_soft)
                     + f"; googlebot got the article ({v.similarity.get(CONTROL)})")
-    elif ai_subst and v.control_clean:
+    elif ai_subst and v.control_clean and marked:
         v.verdict = "substituted"
         v.reason = ("crawler-only content for " + ", ".join(ai_subst)
                     + (f"; edge markers: {', '.join(v.differential_headers)}"
-                       if v.differential_headers else ""))
+                       if v.differential_headers else f"; classified {worst.name.lower()}"))
+    elif ai_subst and v.control_clean:
+        v.verdict = "crawler-only-text"
+        v.reason = ("text not found in the browser version for " + ", ".join(ai_subst)
+                    + "; no promotional or instructional marker, so not counted")
     elif ai_soft or ai_subst:
         v.verdict = "all-bots-differ"
         v.reason = f"control diverges too ({v.similarity.get(CONTROL)})"

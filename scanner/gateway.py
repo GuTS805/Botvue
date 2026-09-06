@@ -34,6 +34,7 @@ attestor: Attestor = QueueAttestor()
 DECISION = {
     "soft-blocked": "block",
     "substituted": "flag",
+    "crawler-only-text": "pass",
     "all-bots-differ": "flag",
     "format-variant": "pass",
     "refused": "pass",
@@ -53,6 +54,12 @@ EXPLANATION = {
     "all-bots-differ": (
         "Crawlers receive different content, but so does Googlebot, so this is not "
         "specific to AI agents."
+    ),
+    "crawler-only-text": (
+        "AI crawlers receive some text the browser version does not contain, but nothing "
+        "identifies it as promotional or instructional. Reported, not acted on: at this "
+        "signal's measured precision, acting would mean blocking pages over navigation "
+        "markup."
     ),
     "refused": "Crawlers were refused with a 4xx. The refusal is visible to the caller.",
     "format-variant": "Crawlers receive the same content in a different format.",

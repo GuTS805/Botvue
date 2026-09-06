@@ -1,5 +1,5 @@
 {
- "captured_at": "2026-09-06T12:48:52Z",
+ "captured_at": "2026-09-06T13:23:29Z",
  "baseline_agent": "chrome",
  "control_agent": "googlebot",
  "note": "Observed facts only: these bytes were served to this user-agent at this time. No claim is made about intent.",
@@ -8730,7 +8730,7 @@
    "domain": "docs.frends.com",
    "chain": "llmstxt",
    "url": "https://docs.frends.com/",
-   "verdict": "substituted",
+   "verdict": "crawler-only-text",
    "control_similarity": 1.0,
    "baseline_words": 467,
    "word_ratio": {
@@ -11677,7 +11677,7 @@
    "domain": "forbes.com",
    "chain": "publisher",
    "url": "https://forbes.com/",
-   "verdict": "substituted",
+   "verdict": "crawler-only-text",
    "control_similarity": 1.0,
    "baseline_words": 2161,
    "word_ratio": {
