@@ -23,3 +23,5 @@ corpus/raw/
 Thumbs.db
 .vscode/
 .idea/
+corpus/results/
+scan_full.log
