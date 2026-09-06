@@ -10,8 +10,12 @@ pragma solidity ^0.8.24;
 /// emitted in the event only — the subgraph indexes them, and keeping them out of storage
 /// holds a finding to three slots.
 contract FindingRegistry {
+    /// @dev MachineOnly covers substantive content served only to crawlers that carries no
+    /// promotional or instructional marker. Recording it as advertising would assert an
+    /// intent that cannot be observed from the response alone.
     enum Classification {
         Cosmetic,
+        MachineOnly,
         Promotional,
         PolicyViolation,
         PromptInjection
