@@ -56,6 +56,20 @@ def _md_variant(url: str) -> str:
     return urlunparse(parts._replace(path=(path or "/index") + ".md"))
 
 
+def _decoded_cleanly(text: str, sample: int = 2000) -> bool:
+    """Guards against comparing compressed bytes as if they were text.
+
+    A missing codec does not raise — the body simply arrives as mojibake, and two mojibake
+    bodies compare as wildly divergent. That produced false findings until it was caught, so
+    an undecodable body is now a fetch failure rather than a silent result.
+    """
+    head = text[:sample]
+    if not head:
+        return True
+    printable = sum(c.isprintable() or c.isspace() for c in head)
+    return printable / len(head) > 0.95
+
+
 def _cache_path(url: str, agent: str, variant: str) -> Path:
     key = hashlib.sha256(f"{url}|{agent}|{variant}".encode()).hexdigest()[:24]
     host = (urlparse(url).hostname or "unknown").replace(":", "_")
@@ -78,6 +92,10 @@ def fetch_one(
     started = time.perf_counter()
     try:
         r = client.get(target, headers=headers_for(agent, variant))
+        if not _decoded_cleanly(r.text):
+            raise ValueError(
+                f"undecoded body (content-encoding: {r.headers.get('content-encoding', '-')})"
+            )
         result = Fetched(
             url=target,
             agent=agent,

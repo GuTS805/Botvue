@@ -36,11 +36,11 @@ class Divergence:
         return bool(self.machine_only)
 
 
-def _unmatched(source: list[Block], against: list[Block]) -> list[Block]:
+def _unmatched(
+    source: list[Block], against: list[Block], haystack: str = ""
+) -> list[Block]:
     if not source:
         return []
-    if not against:
-        return list(source)
 
     against_keys = {b.key for b in against}
     candidates = list(against_keys)
@@ -49,17 +49,31 @@ def _unmatched(source: list[Block], against: list[Block]) -> list[Block]:
     for block in source:
         if block.key in against_keys:
             continue
-        best = process.extractOne(
-            block.key, candidates, scorer=fuzz.token_set_ratio, score_cutoff=NEAR_MATCH_THRESHOLD
-        )
-        if best is None:
-            out.append(block)
+        # The other side's article extraction may simply have dropped this text. If it
+        # appears anywhere in that side's raw visible text, it is not machine-only.
+        if haystack and block.key in haystack:
+            continue
+        if candidates:
+            best = process.extractOne(
+                block.key,
+                candidates,
+                scorer=fuzz.token_set_ratio,
+                score_cutoff=NEAR_MATCH_THRESHOLD,
+            )
+            if best is not None:
+                continue
+        out.append(block)
     return out
 
 
-def compare(baseline: list[Block], variant: list[Block]) -> Divergence:
-    machine_only = _unmatched(variant, baseline)
-    human_only = _unmatched(baseline, variant)
+def compare(
+    baseline: list[Block],
+    variant: list[Block],
+    baseline_haystack: str = "",
+    variant_haystack: str = "",
+) -> Divergence:
+    machine_only = _unmatched(variant, baseline, baseline_haystack)
+    human_only = _unmatched(baseline, variant, variant_haystack)
     return Divergence(
         machine_only=machine_only,
         human_only=human_only,

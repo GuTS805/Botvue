@@ -101,3 +101,43 @@ def to_blocks(text: str) -> list[Block]:
 
 def blocks_from_response(body: str, content_type: str = "") -> list[Block]:
     return to_blocks(extract_text(body, content_type))
+
+
+def shingles(normalised: str, width: int = 5) -> set[str]:
+    """Overlapping word runs. Two renderings of the same page share most of their runs even
+    when tag structure, ordering and extraction quality differ; genuinely different content
+    does not."""
+    words = normalised.split()
+    if len(words) < width:
+        return {" ".join(words)} if words else set()
+    return {" ".join(words[i : i + width]) for i in range(len(words) - width + 1)}
+
+
+def text_similarity(a: str, b: str) -> float:
+    """Containment of the smaller text in the larger.
+
+    Not Jaccard: a Markdown variant is legitimately a fraction of the size of the HTML page,
+    and Jaccard would score that as divergent purely on length. What matters is whether the
+    smaller text is *made of* the larger one — content the other side does not have at all is
+    what this is trying to surface.
+    """
+    sa, sb = shingles(a), shingles(b)
+    if not sa or not sb:
+        return 0.0 if (sa or sb) else 1.0
+    return len(sa & sb) / min(len(sa), len(sb))
+
+
+def haystack(body: str) -> str:
+    """Every scrap of visible text in the response, as one normalised string.
+
+    Article extraction is tuned to drop navigation and furniture, and it drops different
+    amounts from HTML than from Markdown. That asymmetry alone makes real article text look
+    machine-only. Checking a candidate block against the raw text of the human page — not
+    against its extracted article — is what removes those false positives.
+    """
+    if not body.strip():
+        return ""
+    soup = BeautifulSoup(body, "lxml")
+    for tag in soup(["script", "style", "noscript"]):
+        tag.decompose()
+    return normalise_key(soup.get_text(" "))
