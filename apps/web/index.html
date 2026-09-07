@@ -41,9 +41,13 @@ a:hover{color:var(--full)}
 mono,.mono{font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,monospace}
 
 header{padding:26px 0 0}
-.brand{display:flex;align-items:baseline;gap:12px}
+.brand{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
 .brand b{font-family:"Instrument Serif",serif;font-weight:400;font-size:1.5rem;letter-spacing:.01em}
 .brand span{font-size:.85rem;color:var(--ink-soft)}
+.nav{margin-left:auto;display:flex;gap:22px;font-size:.9rem}
+.nav a{color:var(--ink-soft);text-decoration:none}
+.nav a:hover{color:var(--full)}
+.nav a[aria-current]{color:var(--ink);font-weight:600}
 
 .hero{padding:52px 0 8px}
 .hero h1{max-width:16ch}
@@ -149,7 +153,9 @@ footer a{color:var(--ink-soft)}
 <body>
 
 <header class="wrap">
-  <div class="brand"><b>Botvue</b><span>see what the bots see</span></div>
+  <div class="brand"><b>Botvue</b><span>see what the bots see</span>
+    <nav class="nav"><a href="/" aria-current="page">Home</a><a href="/archive">Full archive</a><a href="https://github.com/GuTS805/Botvue">Source</a></nav>
+  </div>
 </header>
 
 <main class="wrap">

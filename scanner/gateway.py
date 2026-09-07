@@ -165,6 +165,34 @@ def evidence(domain: str) -> JSONResponse:
     )
 
 
+@app.get(
+    "/evidence/all",
+    summary="Every property in the frozen scan, not just the two examples on the homepage.",
+    description="The full archive the scan produced, so a finding can be checked against the "
+                "whole set rather than the handful chosen for the homepage.",
+)
+def evidence_all() -> dict:
+    manifest_path = Path(__file__).resolve().parents[1] / "evidence" / "manifest.json"
+    if not manifest_path.exists():
+        return {"capturedAt": None, "note": "", "properties": []}
+
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    properties = [
+        {**record, "decision": DECISION.get(record["verdict"], "pass")}
+        for record in manifest["properties"]
+    ]
+    return {
+        "capturedAt": manifest["captured_at"],
+        "note": manifest["note"],
+        "properties": properties,
+    }
+
+
+@app.get("/archive", include_in_schema=False)
+def archive_page() -> FileResponse:
+    return FileResponse(WEB / "archive.html")
+
+
 @app.get("/terms", summary="What a paid call costs and how payment is verified.")
 def payment_terms() -> dict:
     return terms.challenge()

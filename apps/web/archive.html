@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Botvue — full archive</title>
+<meta name="description" content="Every property in the frozen scan: domain, verdict, and per-crawler status. Not just the examples on the homepage.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2316211e'/%3E%3Crect x='6' y='9' width='9' height='14' fill='%231f6f5c'/%3E%3Crect x='18' y='9' width='9' height='14' fill='none' stroke='%239aa5a8' stroke-width='1.5'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#eef1f0;
+  --paper-2:#e5e9e7;
+  --ink:#16211e;
+  --ink-soft:#4a5a55;
+  --full:#1f6f5c;
+  --void:#9aa5a8;
+  --signal:#b3123c;
+  --warn:#a86a00;
+  --rule:#c9d2ce;
+  --measure:64ch;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;overflow-x:hidden;background:var(--paper);color:var(--ink);
+  font-family:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  font-size:17px;line-height:1.6;
+}
+.wrap{max-width:1180px;margin:0 auto;padding:0 28px}
+.prose{max-width:var(--measure)}
+h1,h2{font-family:"Instrument Serif",Georgia,"Times New Roman",serif;font-weight:400;line-height:1.06;letter-spacing:-.01em;margin:0}
+h1{font-size:clamp(2.2rem,4.8vw,3.4rem)}
+p{margin:0 0 1.05rem}
+a{color:var(--ink);text-decoration-thickness:1px;text-underline-offset:3px}
+a:hover{color:var(--full)}
+:focus-visible{outline:2px solid var(--full);outline-offset:3px;border-radius:2px}
+.mono{font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,monospace}
+
+header{padding:26px 0 0}
+.brand{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.brand b{font-family:"Instrument Serif",serif;font-weight:400;font-size:1.5rem;letter-spacing:.01em}
+.brand span{font-size:.85rem;color:var(--ink-soft)}
+.nav{margin-left:auto;display:flex;gap:22px;font-size:.9rem}
+.nav a{color:var(--ink-soft);text-decoration:none}
+.nav a:hover{color:var(--full)}
+.nav a[aria-current]{color:var(--ink);font-weight:600}
+
+.hero{padding:44px 0 8px}
+.hero h1{max-width:22ch}
+.hero .lede{max-width:56ch;font-size:1.1rem;color:var(--ink-soft);margin-top:1rem}
+
+.stats{display:flex;flex-wrap:wrap;gap:0;margin:34px 0 0;border:1px solid var(--rule)}
+.stat{flex:1 1 130px;padding:16px 18px;border-left:1px solid var(--rule)}
+.stat:first-child{border-left:0}
+.stat b{display:block;font-family:"Instrument Serif",serif;font-size:1.8rem;font-weight:400}
+.stat span{font-size:.8rem;color:var(--ink-soft)}
+
+.controls{margin:38px 0 0;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.filters{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font:inherit;font-size:.84rem;padding:7px 13px;border:1px solid var(--rule);
+  background:transparent;color:var(--ink-soft);cursor:pointer;font-family:"IBM Plex Sans",sans-serif}
+.chip:hover{border-color:var(--full);color:var(--full)}
+.chip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+.search{margin-left:auto;flex:0 1 260px}
+.search input{width:100%;font:inherit;font-size:.92rem;padding:9px 12px;border:1px solid var(--rule);background:#fff;color:var(--ink)}
+.search input:focus{border-color:var(--full);outline:none}
+.count-line{font-size:.86rem;color:var(--ink-soft);margin:12px 0 0}
+
+table{width:100%;border-collapse:collapse;font-size:.92rem;margin:18px 0 0}
+th,td{text-align:left;padding:10px 14px 10px 0;border-bottom:1px solid var(--rule);vertical-align:top}
+th{font-weight:600;font-size:.8rem;color:var(--ink-soft);cursor:pointer;user-select:none;white-space:nowrap}
+th:hover{color:var(--full)}
+th .arrow{font-size:.7em;opacity:.6;margin-left:3px}
+td.domain{font-weight:500}
+td.domain a{text-decoration:none;color:var(--ink)}
+td.domain a:hover{color:var(--full)}
+.chain-tag{font-size:.78rem;color:var(--ink-soft)}
+.tag{display:inline-block;font-family:"IBM Plex Mono",monospace;font-size:.76rem;padding:2px 7px;border:1px solid var(--rule);background:#f6f8f7;white-space:nowrap}
+.tag.block{color:var(--signal);border-color:#e0b8c2;background:#faeef1}
+.tag.flag{color:var(--warn);border-color:#e6cf9c;background:#faf3e2}
+.tag.pass{color:var(--full);border-color:#bcd6cd;background:#eef5f2}
+.statuses{display:flex;flex-wrap:wrap;gap:5px}
+.pill{font-family:"IBM Plex Mono",monospace;font-size:.72rem;padding:1px 6px;border:1px solid var(--rule);color:var(--ink-soft);white-space:nowrap}
+.pill.bad-status{color:var(--signal);border-color:#e0b8c2}
+.expand-btn{font:inherit;font-size:.82rem;padding:5px 10px;border:1px solid var(--rule);background:transparent;color:var(--ink-soft);cursor:pointer}
+.expand-btn:hover{border-color:var(--full);color:var(--full)}
+tr.detail-row{display:none}
+tr.detail-row.show{display:table-row}
+tr.detail-row td{padding:0 0 22px;border-bottom:1px solid var(--rule)}
+.detail-box{background:#f6f8f7;border:1px solid var(--rule);padding:16px 18px}
+.hashrow{display:grid;grid-template-columns:130px 70px 1fr;gap:12px;padding:5px 0;
+  border-bottom:1px solid var(--rule);font-size:.82rem;align-items:baseline}
+.hashrow:last-child{border-bottom:0}
+.hashrow code{font-family:"IBM Plex Mono",monospace;font-size:.76rem;color:var(--ink-soft);overflow-wrap:anywhere}
+.empty{padding:40px 0;color:var(--ink-soft);text-align:center}
+
+footer{border-top:1px solid var(--rule);padding:38px 0 60px;font-size:.9rem;color:var(--ink-soft);margin-top:60px}
+footer a{color:var(--ink-soft)}
+
+@media (max-width:760px){
+  .stats{flex-direction:column}
+  .stat{border-left:0;border-top:1px solid var(--rule)}
+  .stat:first-child{border-top:0}
+  .search{flex:1 1 100%;margin-left:0}
+  .scroller{overflow-x:auto}
+  table{min-width:640px}
+}
+</style>
+</head>
+<body>
+
+<header class="wrap">
+  <div class="brand"><b>Botvue</b><span>see what the bots see</span>
+    <nav class="nav"><a href="/">Home</a><a href="/archive" aria-current="page">Full archive</a><a href="https://github.com/GuTS805/Botvue">Source</a></nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="hero">
+    <h1>Every property this scan touched.</h1>
+    <p class="lede">Not the six examples chosen for the homepage — the whole frozen set,
+      as observed. Filter by what it found, or search a domain you have in mind.</p>
+    <p class="lede" id="captured"></p>
+  </div>
+
+  <div class="stats" id="stats"></div>
+
+  <div class="controls">
+    <div class="filters" id="filters"></div>
+    <div class="search">
+      <input type="search" id="searchInput" placeholder="Search a domain…" aria-label="Search domains">
+    </div>
+  </div>
+  <p class="count-line" id="countLine"></p>
+
+  <div class="scroller">
+  <table id="table">
+    <thead>
+      <tr>
+        <th data-sort="domain">Domain <span class="arrow"></span></th>
+        <th data-sort="chain">Chain <span class="arrow"></span></th>
+        <th data-sort="verdict">Finding <span class="arrow"></span></th>
+        <th>What crawlers received</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody id="rows"></tbody>
+  </table>
+  </div>
+  <p class="empty" id="empty" hidden>No property matches this filter.</p>
+</main>
+
+<footer class="wrap">
+  <p>Same archive the homepage draws its two examples from. Every row is a hash of a
+    response body anyone can fetch again. <a href="https://github.com/GuTS805/Botvue">Source
+    and evidence</a>.</p>
+  <p><a href="/">&larr; Back to Botvue</a></p>
+</footer>
+
+<script>
+const API = location.origin;
+const VERDICT_LABEL = {
+  'soft-blocked': 'Soft-blocked', 'substituted': 'Substituted',
+  'crawler-only-text': 'Crawler-only text', 'all-bots-differ': 'All bots differ',
+  'refused': 'Refused honestly', 'format-variant': 'Format variant', 'clean': 'Clean',
+};
+const DECISION_CLASS = { block: 'block', flag: 'flag', pass: 'pass' };
+
+let all = [];
+let activeVerdict = 'all';
+let query = '';
+let sortKey = 'verdict';
+let sortDir = 1;
+const SEVERITY = { block: 0, flag: 1, pass: 2 };
+
+fetch(API + '/evidence/all').then(r => r.json()).then(d => {
+  all = d.properties || [];
+  if (d.capturedAt) {
+    const when = new Date(d.capturedAt).toLocaleDateString('en-GB',
+      { day: 'numeric', month: 'long', year: 'numeric' });
+    document.getElementById('captured').textContent = 'Observed ' + when + ' — '
+      + all.length + ' properties.';
+  }
+  buildStats();
+  buildFilters();
+  render();
+}).catch(() => {
+  document.getElementById('countLine').textContent = 'Could not load the archive.';
+});
+
+function buildStats() {
+  const counts = {};
+  all.forEach(p => { counts[p.verdict] = (counts[p.verdict] || 0) + 1; });
+  const order = ['soft-blocked', 'substituted', 'crawler-only-text', 'all-bots-differ', 'refused', 'format-variant', 'clean'];
+  const box = document.getElementById('stats');
+  box.innerHTML = '';
+  const total = document.createElement('div');
+  total.className = 'stat';
+  total.innerHTML = '<b>' + all.length + '</b><span>properties scanned</span>';
+  box.appendChild(total);
+  order.filter(v => counts[v]).forEach(v => {
+    const s = document.createElement('div');
+    s.className = 'stat';
+    s.innerHTML = '<b>' + counts[v] + '</b><span>' + (VERDICT_LABEL[v] || v) + '</span>';
+    box.appendChild(s);
+  });
+}
+
+function buildFilters() {
+  const counts = {};
+  all.forEach(p => { counts[p.verdict] = (counts[p.verdict] || 0) + 1; });
+  const order = ['soft-blocked', 'substituted', 'crawler-only-text', 'all-bots-differ', 'refused', 'format-variant', 'clean'];
+  const box = document.getElementById('filters');
+  box.innerHTML = '';
+
+  const makeChip = (key, label) => {
+    const b = document.createElement('button');
+    b.className = 'chip';
+    b.type = 'button';
+    b.textContent = label;
+    b.setAttribute('aria-pressed', String(activeVerdict === key));
+    b.addEventListener('click', () => { activeVerdict = key; render(); buildFilters(); });
+    return b;
+  };
+
+  box.appendChild(makeChip('all', 'All (' + all.length + ')'));
+  order.filter(v => counts[v]).forEach(v => {
+    box.appendChild(makeChip(v, (VERDICT_LABEL[v] || v) + ' (' + counts[v] + ')'));
+  });
+}
+
+document.getElementById('searchInput').addEventListener('input', (e) => {
+  query = e.target.value.trim().toLowerCase();
+  render();
+});
+
+document.querySelectorAll('th[data-sort]').forEach(th => {
+  th.addEventListener('click', () => {
+    const key = th.dataset.sort;
+    if (sortKey === key) sortDir *= -1; else { sortKey = key; sortDir = 1; }
+    document.querySelectorAll('th .arrow').forEach(a => a.textContent = '');
+    th.querySelector('.arrow').textContent = sortDir === 1 ? '↑' : '↓';
+    render();
+  });
+});
+
+function summariseCrawlers(p) {
+  const ratios = Object.entries(p.word_ratio || {});
+  if (ratios.length) {
+    return ratios.sort((a, b) => a[1] - b[1]).slice(0, 3)
+      .map(([agent, r]) => agent + ' ' + Math.round(r * 100) + '%').join(' · ');
+  }
+  const refused = (p.refused || []);
+  if (refused.length) return refused.slice(0, 3).join(' · ');
+  return '—';
+}
+
+function render() {
+  let rows = all.filter(p => activeVerdict === 'all' || p.verdict === activeVerdict);
+  if (query) rows = rows.filter(p => p.domain.toLowerCase().includes(query));
+
+  rows = rows.slice().sort((a, b) => {
+    let cmp = 0;
+    if (sortKey === 'verdict') cmp = (SEVERITY[a.decision] ?? 2) - (SEVERITY[b.decision] ?? 2);
+    else cmp = String(a[sortKey] || '').localeCompare(String(b[sortKey] || ''));
+    return cmp * sortDir;
+  });
+
+  document.getElementById('countLine').textContent =
+    rows.length + (rows.length === 1 ? ' property' : ' properties') +
+    (activeVerdict !== 'all' ? ' — filtered' : '');
+  document.getElementById('empty').hidden = rows.length !== 0;
+
+  const tbody = document.getElementById('rows');
+  tbody.innerHTML = '';
+  rows.forEach((p, i) => {
+    const tr = document.createElement('tr');
+    const statuses = Object.entries(p.agents || {})
+      .filter(([a]) => a !== 'chrome')
+      .map(([agent, r]) => {
+        const bad = String(r.status).startsWith('2') && p.verdict !== 'clean' && p.verdict !== 'refused';
+        return '<span class="pill' + (bad ? ' bad-status' : '') + '">' + agent + ' ' + r.status + '</span>';
+      }).join('');
+
+    tr.innerHTML =
+      '<td class="domain"><a href="' + p.url + '" target="_blank" rel="noopener">' + p.domain + '</a></td>' +
+      '<td class="chain-tag">' + (p.chain || '—') + '</td>' +
+      '<td><span class="tag ' + (DECISION_CLASS[p.decision] || 'pass') + '">' + (VERDICT_LABEL[p.verdict] || p.verdict) + '</span></td>' +
+      '<td><div class="statuses">' + statuses + '</div></td>' +
+      '<td><button class="expand-btn" type="button" data-i="' + i + '">Hashes</button></td>';
+    tbody.appendChild(tr);
+
+    const detail = document.createElement('tr');
+    detail.className = 'detail-row';
+    const box = document.createElement('div');
+    box.className = 'detail-box';
+    Object.entries(p.agents || {}).forEach(([agent, r]) => {
+      const row = document.createElement('div');
+      row.className = 'hashrow';
+      row.innerHTML = '<span>' + agent + '</span><span>' + r.status + '</span>' +
+        '<code>' + (r.sha256 || '').slice(0, 40) + (r.sha256 ? '…' : '') +
+        ' · ' + (r.words != null ? r.words + ' words' : r.bytes + ' bytes') + '</code>';
+      box.appendChild(row);
+    });
+    const td = document.createElement('td');
+    td.colSpan = 5;
+    td.appendChild(box);
+    detail.appendChild(td);
+    tbody.appendChild(detail);
+
+    tr.querySelector('.expand-btn').addEventListener('click', () => {
+      detail.classList.toggle('show');
+    });
+  });
+}
+</script>
+</body>
+</html>
