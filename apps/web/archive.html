@@ -5,131 +5,163 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Botvue — full archive</title>
 <meta name="description" content="Every property in the frozen scan: domain, verdict, and per-crawler status. Not just the examples on the homepage.">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2316211e'/%3E%3Crect x='6' y='9' width='9' height='14' fill='%231f6f5c'/%3E%3Crect x='18' y='9' width='9' height='14' fill='none' stroke='%239aa5a8' stroke-width='1.5'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23101715'/%3E%3Crect x='6' y='9' width='9' height='14' fill='%2316644f'/%3E%3Crect x='18' y='9' width='9' height='14' fill='none' stroke='%23bd1f3c' stroke-width='1.5'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
+/* Same system as the homepage: colour describes what a response contained,
+   never what its status code claimed. A 4xx refusal gets its own calm colour
+   because refusing a crawler openly is not the problem being reported. */
 :root{
-  --paper:#eef1f0;
-  --paper-2:#e5e9e7;
-  --ink:#16211e;
-  --ink-soft:#4a5a55;
-  --full:#1f6f5c;
-  --void:#9aa5a8;
-  --signal:#b3123c;
-  --warn:#a86a00;
-  --rule:#c9d2ce;
-  --measure:64ch;
+  --ground:#eceeec;
+  --ground-2:#e2e6e3;
+  --surface:#f7f9f7;
+  --ink:#101715;
+  --ink-2:#55605c;
+  --ink-3:#7d8783;
+  --rule:#ccd4cf;
+  --rule-2:#dde3df;
+
+  --received:#16644f;
+  --absent:#8d9a99;
+  --lie:#bd1f3c;
+  --honest:#3f5c8a;
+  --warn:#9a6412;
+
+  --measure:66ch;
 }
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
 body{
-  margin:0;overflow-x:hidden;background:var(--paper);color:var(--ink);
-  font-family:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
-  font-size:17px;line-height:1.6;
+  margin:0;overflow-x:hidden;background:var(--ground);color:var(--ink);
+  font-family:Archivo,system-ui,-apple-system,"Segoe UI",sans-serif;
+  font-size:17px;line-height:1.62;font-variant-numeric:tabular-nums;
 }
-.wrap{max-width:1180px;margin:0 auto;padding:0 28px}
+.wrap{max-width:1180px;margin:0 auto;padding:0 30px}
 .prose{max-width:var(--measure)}
-h1,h2{font-family:"Instrument Serif",Georgia,"Times New Roman",serif;font-weight:400;line-height:1.06;letter-spacing:-.01em;margin:0}
-h1{font-size:clamp(2.2rem,4.8vw,3.4rem)}
+h1,h2{font-weight:600;line-height:1.04;letter-spacing:-.03em;margin:0}
+h1{font-size:clamp(2.2rem,4.6vw,3.3rem)}
 p{margin:0 0 1.05rem}
 a{color:var(--ink);text-decoration-thickness:1px;text-underline-offset:3px}
-a:hover{color:var(--full)}
-:focus-visible{outline:2px solid var(--full);outline-offset:3px;border-radius:2px}
-.mono{font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,monospace}
+a:hover{color:var(--received)}
+:focus-visible{outline:2px solid var(--received);outline-offset:3px;border-radius:2px}
+.m{font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,monospace;font-feature-settings:"zero" 1}
 
-header{padding:26px 0 0}
-.brand{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
-.brand b{font-family:"Instrument Serif",serif;font-weight:400;font-size:1.5rem;letter-spacing:.01em}
-.brand span{font-size:.85rem;color:var(--ink-soft)}
-.nav{margin-left:auto;display:flex;gap:22px;font-size:.9rem}
-.nav a{color:var(--ink-soft);text-decoration:none}
-.nav a:hover{color:var(--full)}
+header{padding:24px 0 0}
+.brand{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.mark{width:26px;height:26px;flex:none}
+.brand b{font-weight:700;font-size:1.22rem;letter-spacing:-.03em}
+.brand .tag-line{font-size:.86rem;color:var(--ink-2)}
+.nav{margin-left:auto;display:flex;gap:24px;font-size:.9rem}
+.nav a{color:var(--ink-2);text-decoration:none}
+.nav a:hover{color:var(--received)}
 .nav a[aria-current]{color:var(--ink);font-weight:600}
 
-.hero{padding:44px 0 8px}
-.hero h1{max-width:22ch}
-.hero .lede{max-width:56ch;font-size:1.1rem;color:var(--ink-soft);margin-top:1rem}
+.hero{padding:48px 0 8px}
+.hero h1{max-width:20ch}
+.hero .lede{max-width:58ch;font-size:1.12rem;color:var(--ink-2);margin-top:1.1rem}
+.hero .captured{font-family:"JetBrains Mono",monospace;font-size:.86rem;color:var(--ink-3);margin-top:.6rem}
 
-.stats{display:flex;flex-wrap:wrap;gap:0;margin:34px 0 0;border:1px solid var(--rule)}
-.stat{flex:1 1 130px;padding:16px 18px;border-left:1px solid var(--rule)}
+.stats{display:flex;flex-wrap:wrap;gap:0;margin:36px 0 0;border:1px solid var(--rule);background:var(--surface)}
+.stat{flex:1 1 132px;padding:17px 20px;border-left:1px solid var(--rule)}
 .stat:first-child{border-left:0}
-.stat b{display:block;font-family:"Instrument Serif",serif;font-size:1.8rem;font-weight:400}
-.stat span{font-size:.8rem;color:var(--ink-soft)}
+.stat b{display:block;font-family:"JetBrains Mono",monospace;font-size:1.5rem;font-weight:600;
+  letter-spacing:-.03em;line-height:1.15}
+.stat span{font-size:.82rem;color:var(--ink-2)}
+.stat.is-lie b{color:var(--lie)}
+.stat.is-honest b{color:var(--honest)}
 
 .controls{margin:38px 0 0;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 .filters{display:flex;flex-wrap:wrap;gap:8px}
-.chip{font:inherit;font-size:.84rem;padding:7px 13px;border:1px solid var(--rule);
-  background:transparent;color:var(--ink-soft);cursor:pointer;font-family:"IBM Plex Sans",sans-serif}
-.chip:hover{border-color:var(--full);color:var(--full)}
-.chip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--paper)}
-.search{margin-left:auto;flex:0 1 260px}
-.search input{width:100%;font:inherit;font-size:.92rem;padding:9px 12px;border:1px solid var(--rule);background:#fff;color:var(--ink)}
-.search input:focus{border-color:var(--full);outline:none}
-.count-line{font-size:.86rem;color:var(--ink-soft);margin:12px 0 0}
+.chip{font:inherit;font-family:Archivo,sans-serif;font-size:.86rem;padding:7px 13px;
+  border:1px solid var(--rule);background:transparent;color:var(--ink-2);cursor:pointer}
+.chip:hover{border-color:var(--received);color:var(--received)}
+.chip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--ground)}
+.search{margin-left:auto;flex:0 1 270px}
+.search input{width:100%;font:inherit;font-family:"JetBrains Mono",monospace;font-size:.9rem;
+  padding:10px 12px;border:1px solid var(--rule);background:#fff;color:var(--ink)}
+.search input:focus{border-color:var(--received);outline:none;box-shadow:0 0 0 3px rgba(22,100,79,.13)}
+.count-line{font-size:.86rem;color:var(--ink-2);margin:14px 0 0}
 
 /* Wide content scrolls inside its own box; the page itself must never scroll sideways. */
 .scroller{overflow-x:auto;-webkit-overflow-scrolling:touch}
 table{width:100%;border-collapse:collapse;font-size:.92rem;margin:18px 0 0}
-th,td{text-align:left;padding:10px 14px 10px 0;border-bottom:1px solid var(--rule);vertical-align:top}
-th{font-weight:600;font-size:.8rem;color:var(--ink-soft);cursor:pointer;user-select:none;white-space:nowrap}
-th:hover{color:var(--full)}
-th .arrow{font-size:.7em;opacity:.6;margin-left:3px}
+th,td{text-align:left;padding:11px 16px 11px 0;border-bottom:1px solid var(--rule-2);vertical-align:top}
+th{font-weight:600;font-size:.82rem;color:var(--ink-2);cursor:pointer;user-select:none;white-space:nowrap}
+th:hover{color:var(--received)}
+th .arrow{font-size:.72em;opacity:.65;margin-left:3px}
 td.domain{font-weight:500}
 td.domain a{text-decoration:none;color:var(--ink)}
-td.domain a:hover{color:var(--full)}
-.chain-tag{font-size:.78rem;color:var(--ink-soft)}
-.tag{display:inline-block;font-family:"IBM Plex Mono",monospace;font-size:.76rem;padding:2px 7px;border:1px solid var(--rule);background:#f6f8f7;white-space:nowrap}
-.tag.block{color:var(--signal);border-color:#e0b8c2;background:#faeef1}
-.tag.flag{color:var(--warn);border-color:#e6cf9c;background:#faf3e2}
-.tag.pass{color:var(--full);border-color:#bcd6cd;background:#eef5f2}
+td.domain a:hover{color:var(--received)}
+.chain-tag{font-family:"JetBrains Mono",monospace;font-size:.8rem;color:var(--ink-3)}
+.tag{display:inline-block;font-family:"JetBrains Mono",monospace;font-size:.76rem;font-weight:500;
+  padding:2px 8px;color:#fff;white-space:nowrap}
+.tag.lie{background:var(--lie)}
+.tag.honest{background:var(--honest)}
+.tag.flag{background:var(--warn)}
+.tag.received{background:var(--received)}
 .statuses{display:flex;flex-wrap:wrap;gap:5px}
-.pill{font-family:"IBM Plex Mono",monospace;font-size:.72rem;padding:1px 6px;border:1px solid var(--rule);color:var(--ink-soft);white-space:nowrap}
-.pill.bad-status{color:var(--signal);border-color:#e0b8c2}
-.expand-btn{font:inherit;font-size:.82rem;padding:5px 10px;border:1px solid var(--rule);background:transparent;color:var(--ink-soft);cursor:pointer}
-.expand-btn:hover{border-color:var(--full);color:var(--full)}
+.pill{font-family:"JetBrains Mono",monospace;font-size:.74rem;padding:2px 7px;
+  border:1px solid var(--rule);color:var(--ink-2);white-space:nowrap;background:var(--surface)}
+.pill.bad-status{color:var(--lie);border-color:#e2b4bf;background:#faedf0}
+.expand-btn{font:inherit;font-family:Archivo,sans-serif;font-size:.83rem;padding:5px 11px;
+  border:1px solid var(--rule);background:transparent;color:var(--ink-2);cursor:pointer}
+.expand-btn:hover{border-color:var(--received);color:var(--received)}
 tr.detail-row{display:none}
 tr.detail-row.show{display:table-row}
-tr.detail-row td{padding:0 0 22px;border-bottom:1px solid var(--rule)}
-.detail-box{background:#f6f8f7;border:1px solid var(--rule);padding:16px 18px}
-.hashrow{display:grid;grid-template-columns:130px 70px 1fr;gap:12px;padding:5px 0;
-  border-bottom:1px solid var(--rule);font-size:.82rem;align-items:baseline}
+tr.detail-row td{padding:0 0 22px;border-bottom:1px solid var(--rule-2)}
+.detail-box{background:var(--surface);border:1px solid var(--rule);padding:16px 18px}
+.hashrow{display:grid;grid-template-columns:130px 62px 1fr;gap:12px;padding:6px 0;
+  border-bottom:1px solid var(--rule-2);font-size:.83rem;align-items:baseline}
 .hashrow:last-child{border-bottom:0}
-.hashrow code{font-family:"IBM Plex Mono",monospace;font-size:.76rem;color:var(--ink-soft);overflow-wrap:anywhere}
-.empty{padding:40px 0;color:var(--ink-soft);text-align:center}
-.pager{display:flex;align-items:center;gap:16px;justify-content:center;margin:26px 0 0;font-size:.9rem}
-.pager button{font:inherit;font-size:.86rem;padding:8px 16px;border:1px solid var(--rule);background:transparent;color:var(--ink);cursor:pointer}
-.pager button:hover:not(:disabled){border-color:var(--full);color:var(--full)}
+.hashrow code{font-family:"JetBrains Mono",monospace;font-size:.77rem;color:var(--ink-2);overflow-wrap:anywhere}
+.hashrow .st{font-family:"JetBrains Mono",monospace;font-size:.78rem}
+.empty{padding:44px 0;color:var(--ink-2);text-align:center}
+
+.pager{display:flex;align-items:center;gap:16px;justify-content:center;margin:28px 0 0;font-size:.9rem}
+.pager button{font:inherit;font-family:Archivo,sans-serif;font-size:.87rem;padding:8px 16px;
+  border:1px solid var(--rule);background:transparent;color:var(--ink);cursor:pointer}
+.pager button:hover:not(:disabled){border-color:var(--received);color:var(--received)}
 .pager button:disabled{opacity:.4;cursor:default}
-.pager span{color:var(--ink-soft)}
+.pager span{color:var(--ink-2);font-family:"JetBrains Mono",monospace;font-size:.85rem}
 
-footer{border-top:1px solid var(--rule);padding:38px 0 60px;font-size:.9rem;color:var(--ink-soft);margin-top:60px}
-footer a{color:var(--ink-soft)}
+footer{border-top:1px solid var(--rule);padding:40px 0 64px;font-size:.9rem;color:var(--ink-2);margin-top:64px}
+footer a{color:var(--ink-2)}
 
-@media (max-width:760px){
+@media (max-width:780px){
   .stats{flex-direction:column}
   .stat{border-left:0;border-top:1px solid var(--rule)}
   .stat:first-child{border-top:0}
   .search{flex:1 1 100%;margin-left:0}
-  table{min-width:640px}
+  table{min-width:660px}
 }
 </style>
 </head>
 <body>
 
 <header class="wrap">
-  <div class="brand"><b>Botvue</b><span>see what the bots see</span>
-    <nav class="nav"><a href="/">Home</a><a href="/archive" aria-current="page">Full archive</a><a href="https://github.com/GuTS805/Botvue">Source</a></nav>
+  <div class="brand">
+    <svg class="mark" viewBox="0 0 32 32" aria-hidden="true">
+      <rect width="32" height="32" fill="#101715"/>
+      <rect x="6" y="9" width="9" height="14" fill="#16644f"/>
+      <rect x="18" y="9" width="9" height="14" fill="none" stroke="#bd1f3c" stroke-width="1.5"/>
+    </svg>
+    <b>Botvue</b><span class="tag-line">see what the bots see</span>
+    <nav class="nav">
+      <a href="/">Home</a>
+      <a href="/archive" aria-current="page">Full archive</a>
+      <a href="https://github.com/GuTS805/Botvue">Source</a>
+    </nav>
   </div>
 </header>
 
 <main class="wrap">
   <div class="hero">
     <h1>Every property this scan touched.</h1>
-    <p class="lede">Not the six examples chosen for the homepage — the whole frozen set,
-      as observed. Filter by what it found, or search a domain you have in mind.</p>
-    <p class="lede" id="captured"></p>
+    <p class="lede">Not the handful chosen for the homepage — the whole frozen set, as
+      observed. Filter by what a site did, or search for one you have in mind.</p>
+    <p class="captured" id="captured"></p>
   </div>
 
   <div class="stats" id="stats"></div>
@@ -137,7 +169,7 @@ footer a{color:var(--ink-soft)}
   <div class="controls">
     <div class="filters" id="filters"></div>
     <div class="search">
-      <input type="search" id="searchInput" placeholder="Search a domain…" aria-label="Search domains">
+      <input type="search" id="searchInput" placeholder="search a domain" aria-label="Search domains">
     </div>
   </div>
   <p class="count-line" id="countLine"></p>
@@ -147,9 +179,9 @@ footer a{color:var(--ink-soft)}
     <thead>
       <tr>
         <th data-sort="domain">Domain <span class="arrow"></span></th>
-        <th data-sort="chain">Chain <span class="arrow"></span></th>
-        <th data-sort="verdict">Finding <span class="arrow"></span></th>
-        <th>What crawlers received</th>
+        <th data-sort="chain">Group <span class="arrow"></span></th>
+        <th data-sort="verdict">What it did <span class="arrow"></span></th>
+        <th>Status by user-agent</th>
         <th></th>
       </tr>
     </thead>
@@ -158,27 +190,38 @@ footer a{color:var(--ink-soft)}
   </div>
   <p class="empty" id="empty" hidden>No property matches this filter.</p>
   <div class="pager" id="pager" hidden>
-    <button type="button" id="prevPage">&larr; Previous</button>
+    <button type="button" id="prevPage">Previous</button>
     <span id="pageLabel"></span>
-    <button type="button" id="nextPage">Next &rarr;</button>
+    <button type="button" id="nextPage">Next</button>
   </div>
 </main>
 
 <footer class="wrap">
-  <p>Same archive the homepage draws its two examples from. Every row is a hash of a
-    response body anyone can fetch again. <a href="https://github.com/GuTS805/Botvue">Source
-    and evidence</a>.</p>
-  <p><a href="/">&larr; Back to Botvue</a></p>
+  <p>The same archive the homepage draws its examples from. Every row is a hash of a response
+    body anyone can fetch again, and the raw data is at
+    <a href="/evidence/all"><span class="m">/evidence/all</span></a>.
+    <a href="https://github.com/GuTS805/Botvue">Source and evidence</a>.</p>
+  <p><a href="/">Back to Botvue</a></p>
 </footer>
 
 <script>
 const API = location.origin;
 const VERDICT_LABEL = {
+  'soft-blocked': 'Answered success, sent nothing', 'substituted': 'Substituted content',
+  'crawler-only-text': 'Crawler-only text', 'all-bots-differ': 'All bots differ',
+  'refused': 'Refused openly', 'format-variant': 'Format variant', 'clean': 'Same as a browser',
+};
+// Short forms for the filter row, where the full sentence would not fit.
+const VERDICT_SHORT = {
   'soft-blocked': 'Soft-blocked', 'substituted': 'Substituted',
   'crawler-only-text': 'Crawler-only text', 'all-bots-differ': 'All bots differ',
-  'refused': 'Refused honestly', 'format-variant': 'Format variant', 'clean': 'Clean',
+  'refused': 'Refused openly', 'format-variant': 'Format variant', 'clean': 'Clean',
 };
-const DECISION_CLASS = { block: 'block', flag: 'flag', pass: 'pass' };
+// A 4xx refusal is not a failure state, so it does not borrow the alarm colour.
+function kindOf(p) {
+  if (p.verdict === 'refused') return 'honest';
+  return { block: 'lie', flag: 'flag', pass: 'received' }[p.decision] || 'received';
+}
 
 let all = [];
 let activeVerdict = 'all';
@@ -188,14 +231,15 @@ let sortDir = 1;
 let page = 0;
 const PAGE_SIZE = 25;
 const SEVERITY = { block: 0, flag: 1, pass: 2 };
+const ORDER = ['soft-blocked', 'substituted', 'crawler-only-text', 'all-bots-differ', 'refused', 'format-variant', 'clean'];
 
 fetch(API + '/evidence/all').then(r => r.json()).then(d => {
   all = d.properties || [];
   if (d.capturedAt) {
     const when = new Date(d.capturedAt).toLocaleDateString('en-GB',
       { day: 'numeric', month: 'long', year: 'numeric' });
-    document.getElementById('captured').textContent = 'Observed ' + when + ' — '
-      + all.length + ' properties.';
+    document.getElementById('captured').textContent = 'observed ' + when
+      + ' · ' + all.length + ' properties · frozen, not live';
   }
   buildStats();
   buildFilters();
@@ -207,25 +251,26 @@ fetch(API + '/evidence/all').then(r => r.json()).then(d => {
 function buildStats() {
   const counts = {};
   all.forEach(p => { counts[p.verdict] = (counts[p.verdict] || 0) + 1; });
-  const order = ['soft-blocked', 'substituted', 'crawler-only-text', 'all-bots-differ', 'refused', 'format-variant', 'clean'];
   const box = document.getElementById('stats');
   box.innerHTML = '';
-  const total = document.createElement('div');
-  total.className = 'stat';
-  total.innerHTML = '<b>' + all.length + '</b><span>properties scanned</span>';
-  box.appendChild(total);
-  order.filter(v => counts[v]).forEach(v => {
+
+  const add = (n, label, cls) => {
     const s = document.createElement('div');
-    s.className = 'stat';
-    s.innerHTML = '<b>' + counts[v] + '</b><span>' + (VERDICT_LABEL[v] || v) + '</span>';
+    s.className = 'stat' + (cls ? ' ' + cls : '');
+    s.innerHTML = '<b>' + n + '</b><span>' + label + '</span>';
     box.appendChild(s);
-  });
+  };
+
+  add(all.length, 'properties measured');
+  if (counts['soft-blocked']) add(counts['soft-blocked'], 'answered success, sent nothing', 'is-lie');
+  if (counts['refused']) add(counts['refused'], 'refused openly', 'is-honest');
+  const other = all.length - (counts['soft-blocked'] || 0) - (counts['refused'] || 0);
+  if (other > 0) add(other, 'something else differed');
 }
 
 function buildFilters() {
   const counts = {};
   all.forEach(p => { counts[p.verdict] = (counts[p.verdict] || 0) + 1; });
-  const order = ['soft-blocked', 'substituted', 'crawler-only-text', 'all-bots-differ', 'refused', 'format-variant', 'clean'];
   const box = document.getElementById('filters');
   box.innerHTML = '';
 
@@ -239,9 +284,9 @@ function buildFilters() {
     return b;
   };
 
-  box.appendChild(makeChip('all', 'All (' + all.length + ')'));
-  order.filter(v => counts[v]).forEach(v => {
-    box.appendChild(makeChip(v, (VERDICT_LABEL[v] || v) + ' (' + counts[v] + ')'));
+  box.appendChild(makeChip('all', 'All ' + all.length));
+  ORDER.filter(v => counts[v]).forEach(v => {
+    box.appendChild(makeChip(v, (VERDICT_SHORT[v] || v) + ' ' + counts[v]));
   });
 }
 
@@ -262,19 +307,10 @@ document.querySelectorAll('th[data-sort]').forEach(th => {
   });
 });
 
-document.getElementById('prevPage').addEventListener('click', () => { page--; render(); window.scrollTo({top: document.getElementById('table').offsetTop - 20, behavior: 'smooth'}); });
-document.getElementById('nextPage').addEventListener('click', () => { page++; render(); window.scrollTo({top: document.getElementById('table').offsetTop - 20, behavior: 'smooth'}); });
-
-function summariseCrawlers(p) {
-  const ratios = Object.entries(p.word_ratio || {});
-  if (ratios.length) {
-    return ratios.sort((a, b) => a[1] - b[1]).slice(0, 3)
-      .map(([agent, r]) => agent + ' ' + Math.round(r * 100) + '%').join(' · ');
-  }
-  const refused = (p.refused || []);
-  if (refused.length) return refused.slice(0, 3).join(' · ');
-  return '—';
-}
+const toTable = () => window.scrollTo({
+  top: document.getElementById('table').offsetTop - 20, behavior: 'smooth' });
+document.getElementById('prevPage').addEventListener('click', () => { page--; render(); toTable(); });
+document.getElementById('nextPage').addEventListener('click', () => { page++; render(); toTable(); });
 
 function render() {
   let matched = all.filter(p => activeVerdict === 'all' || p.verdict === activeVerdict);
@@ -298,27 +334,29 @@ function render() {
 
   const pager = document.getElementById('pager');
   pager.hidden = matched.length <= PAGE_SIZE;
-  document.getElementById('pageLabel').textContent = 'Page ' + (page + 1) + ' of ' + pageCount;
+  document.getElementById('pageLabel').textContent = (page + 1) + ' / ' + pageCount;
   document.getElementById('prevPage').disabled = page === 0;
   document.getElementById('nextPage').disabled = page >= pageCount - 1;
 
   const tbody = document.getElementById('rows');
   tbody.innerHTML = '';
-  rows.forEach((p, i) => {
+  rows.forEach((p) => {
     const tr = document.createElement('tr');
+    // A 2xx on a property that sent nothing is the thing worth marking; a 4xx here
+    // is the site being straight with the caller.
     const statuses = Object.entries(p.agents || {})
       .filter(([a]) => a !== 'chrome')
       .map(([agent, r]) => {
-        const bad = String(r.status).startsWith('2') && p.verdict !== 'clean' && p.verdict !== 'refused';
-        return '<span class="pill' + (bad ? ' bad-status' : '') + '">' + agent + ' ' + r.status + '</span>';
+        const misleading = String(r.status).startsWith('2') && p.decision === 'block';
+        return '<span class="pill' + (misleading ? ' bad-status' : '') + '">' + agent + ' ' + r.status + '</span>';
       }).join('');
 
     tr.innerHTML =
       '<td class="domain"><a href="' + p.url + '" target="_blank" rel="noopener">' + p.domain + '</a></td>' +
       '<td class="chain-tag">' + (p.chain || '—') + '</td>' +
-      '<td><span class="tag ' + (DECISION_CLASS[p.decision] || 'pass') + '">' + (VERDICT_LABEL[p.verdict] || p.verdict) + '</span></td>' +
+      '<td><span class="tag ' + kindOf(p) + '">' + (VERDICT_LABEL[p.verdict] || p.verdict) + '</span></td>' +
       '<td><div class="statuses">' + statuses + '</div></td>' +
-      '<td><button class="expand-btn" type="button" data-i="' + i + '">Hashes</button></td>';
+      '<td><button class="expand-btn" type="button">Hashes</button></td>';
     tbody.appendChild(tr);
 
     const detail = document.createElement('tr');
@@ -328,7 +366,7 @@ function render() {
     Object.entries(p.agents || {}).forEach(([agent, r]) => {
       const row = document.createElement('div');
       row.className = 'hashrow';
-      row.innerHTML = '<span>' + agent + '</span><span>' + r.status + '</span>' +
+      row.innerHTML = '<span>' + agent + '</span><span class="st">' + r.status + '</span>' +
         '<code>' + (r.sha256 || '').slice(0, 40) + (r.sha256 ? '…' : '') +
         ' · ' + (r.words != null ? r.words + ' words' : r.bytes + ' bytes') + '</code>';
       box.appendChild(row);
