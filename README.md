@@ -276,6 +276,24 @@ access this content"*, which is self-evident without any control at all.
 Nothing here distinguishes them, and the harm does not depend on which it is: an agent
 receiving `200` cannot tell any of them from success.
 
+**A Graph cross-check for the Bazantic/Base payment leg was attempted and dropped, not
+shipped half-working.** The same "two independent sources must agree" pattern used for
+Hedera settlement — `CrossCheck` in [`scanner/payments.py`](scanner/payments.py) — was tried
+against Base: confirm a Bazantic USDC settlement independently, via an indexed subgraph,
+the way the mirror node confirms Blocky402. Three specific dead ends, in order. The only
+purpose-built `base-usdc` subgraph on The Graph Network carries zero curation signal, so no
+indexer serves it (`"subgraph not found: no allocations"`). The Graph's own x402 query
+gateway is real and was called live — `gateway.thegraph.com/api/x402/subgraphs/id/...`
+returns a genuine 402 with Base's real USDC contract as the asset — but its challenge
+arrives in a `payment-required` header, not the JSON body every x402 client in this project
+expects, and settling it would in any case need signing with a wallet key this project's
+custodial payer never holds. The Token API, the product actually shaped for "any wallet's
+transfers," authenticates through a separate Pinax key unrelated to a Subgraph Studio key.
+None of these is a bug in this project; they are the shape of generic ERC-20 lookups on The
+Graph right now. Asserting a cross-check that whoever reads this could not reproduce would
+be exactly the failure class this project spends its time finding in other people's
+services.
+
 **Re-verified 6 September, ~1 hour after the first scan.** The numbers that carry the
 argument were byte-identical on both runs: 182 TollBit responses split 126 × `402` and
 56 × `200`, and 46 Hearst stub responses. Re-run
