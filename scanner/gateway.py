@@ -21,6 +21,7 @@ from urllib.parse import urlparse
 
 from .agents import AGENTS, BASELINE, CONTROL
 from .attest import QueueAttestor
+from .demo_page import render as render_demo_page
 from .payments import OpenVerifier, build_payment_layer
 from .service import DECISION, EXPLANATION, CheckResult, check
 
@@ -202,6 +203,19 @@ def archive_page() -> FileResponse:
 @app.get("/terms", summary="What a paid call costs and how payment is verified.")
 def payment_terms() -> dict:
     return terms.challenge()
+
+
+@app.get(
+    "/demo/injection-page",
+    include_in_schema=False,
+    summary="Synthetic capability demo — not a finding from the corpus.",
+)
+def demo_injection_page(user_agent: str | None = Header(default=None)) -> Response:
+    # A page this project built and controls, to demonstrate the block path on an
+    # unambiguous signal. Real corpus findings never contain an explicit instruction —
+    # see scanner/demo_page.py for why that distinction matters.
+    html = render_demo_page(user_agent or "")
+    return Response(content=html, media_type="text/html")
 
 
 @app.get("/llms.txt", response_class=PlainTextResponse, include_in_schema=False)
