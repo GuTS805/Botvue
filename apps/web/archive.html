@@ -8,20 +8,20 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23101715'/%3E%3Crect x='6' y='9' width='9' height='14' fill='%2316644f'/%3E%3Crect x='18' y='9' width='9' height='14' fill='none' stroke='%23bd1f3c' stroke-width='1.5'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 /* Same system as the homepage: colour describes what a response contained,
    never what its status code claimed. A 4xx refusal gets its own calm colour
    because refusing a crawler openly is not the problem being reported. */
 :root{
-  --ground:#eceeec;
-  --ground-2:#e2e6e3;
-  --surface:#f7f9f7;
-  --ink:#101715;
-  --ink-2:#55605c;
-  --ink-3:#7d8783;
-  --rule:#ccd4cf;
-  --rule-2:#dde3df;
+  --ground:#eef0ed;
+  --ground-2:#e3e7e3;
+  --surface:#fafbfa;
+  --ink:#0d1412;
+  --ink-2:#525d58;
+  --ink-3:#7b857f;
+  --rule:#cfd7d1;
+  --rule-2:#dee4df;
 
   --received:#16644f;
   --absent:#8d9a99;
@@ -30,18 +30,32 @@
   --warn:#9a6412;
 
   --measure:66ch;
+  --r:10px;
+  --r-lg:16px;
+  --lift:0 1px 2px rgba(13,20,18,.05), 0 8px 24px -12px rgba(13,20,18,.14);
 }
 *{box-sizing:border-box}
-html{-webkit-text-size-adjust:100%}
+html{-webkit-text-size-adjust:100%;overflow-x:clip}
 body{
-  margin:0;overflow-x:hidden;background:var(--ground);color:var(--ink);
-  font-family:Archivo,system-ui,-apple-system,"Segoe UI",sans-serif;
+  margin:0;overflow-x:clip;color:var(--ink);
+  font-family:"Instrument Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
   font-size:17px;line-height:1.62;font-variant-numeric:tabular-nums;
+  background:
+    radial-gradient(1100px 520px at 84% -10%, rgba(22,100,79,.09), transparent 62%),
+    radial-gradient(760px 420px at 2% 8%, rgba(63,92,138,.05), transparent 58%),
+    var(--ground);
+  background-attachment:fixed;
 }
+body::before{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.32;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='.42'/%3E%3C/svg%3E");
+}
+body>*{position:relative;z-index:1}
 .wrap{max-width:1180px;margin:0 auto;padding:0 30px}
 .prose{max-width:var(--measure)}
-h1,h2{font-weight:600;line-height:1.04;letter-spacing:-.03em;margin:0}
-h1{font-size:clamp(2.2rem,4.6vw,3.3rem)}
+h1,h2{font-family:"Space Grotesk",sans-serif;font-weight:600;line-height:1.03;
+  letter-spacing:-.032em;margin:0}
+h1{font-size:clamp(2.2rem,4.6vw,3.3rem);font-weight:700;letter-spacing:-.04em}
 p{margin:0 0 1.05rem}
 a{color:var(--ink);text-decoration-thickness:1px;text-underline-offset:3px}
 a:hover{color:var(--received)}
@@ -63,7 +77,8 @@ header{padding:24px 0 0}
 .hero .lede{max-width:58ch;font-size:1.12rem;color:var(--ink-2);margin-top:1.1rem}
 .hero .captured{font-family:"JetBrains Mono",monospace;font-size:.86rem;color:var(--ink-3);margin-top:.6rem}
 
-.stats{display:flex;flex-wrap:wrap;gap:0;margin:36px 0 0;border:1px solid var(--rule);background:var(--surface)}
+.stats{display:flex;flex-wrap:wrap;gap:0;margin:36px 0 0;border:1px solid var(--rule);
+  background:var(--surface);border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--lift)}
 .stat{flex:1 1 132px;padding:17px 20px;border-left:1px solid var(--rule)}
 .stat:first-child{border-left:0}
 .stat b{display:block;font-family:"JetBrains Mono",monospace;font-size:1.5rem;font-weight:600;
@@ -74,13 +89,13 @@ header{padding:24px 0 0}
 
 .controls{margin:38px 0 0;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 .filters{display:flex;flex-wrap:wrap;gap:8px}
-.chip{font:inherit;font-family:Archivo,sans-serif;font-size:.86rem;padding:7px 13px;
-  border:1px solid var(--rule);background:transparent;color:var(--ink-2);cursor:pointer}
+.chip{font:inherit;font-family:"Instrument Sans",sans-serif;font-size:.86rem;padding:7px 14px;
+  border:1px solid var(--rule);background:transparent;color:var(--ink-2);cursor:pointer;border-radius:99px}
 .chip:hover{border-color:var(--received);color:var(--received)}
 .chip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--ground)}
 .search{margin-left:auto;flex:0 1 270px}
 .search input{width:100%;font:inherit;font-family:"JetBrains Mono",monospace;font-size:.9rem;
-  padding:10px 12px;border:1px solid var(--rule);background:#fff;color:var(--ink)}
+  padding:10px 13px;border:1px solid var(--rule);background:#fff;color:var(--ink);border-radius:8px}
 .search input:focus{border-color:var(--received);outline:none;box-shadow:0 0 0 3px rgba(22,100,79,.13)}
 .count-line{font-size:.86rem;color:var(--ink-2);margin:14px 0 0}
 
@@ -96,22 +111,22 @@ td.domain a{text-decoration:none;color:var(--ink)}
 td.domain a:hover{color:var(--received)}
 .chain-tag{font-family:"JetBrains Mono",monospace;font-size:.8rem;color:var(--ink-3)}
 .tag{display:inline-block;font-family:"JetBrains Mono",monospace;font-size:.76rem;font-weight:500;
-  padding:2px 8px;color:#fff;white-space:nowrap}
+  padding:2px 8px;color:#fff;white-space:nowrap;border-radius:4px}
 .tag.lie{background:var(--lie)}
 .tag.honest{background:var(--honest)}
 .tag.flag{background:var(--warn)}
 .tag.received{background:var(--received)}
 .statuses{display:flex;flex-wrap:wrap;gap:5px}
-.pill{font-family:"JetBrains Mono",monospace;font-size:.74rem;padding:2px 7px;
+.pill{font-family:"JetBrains Mono",monospace;font-size:.74rem;padding:2px 8px;border-radius:5px;
   border:1px solid var(--rule);color:var(--ink-2);white-space:nowrap;background:var(--surface)}
 .pill.bad-status{color:var(--lie);border-color:#e2b4bf;background:#faedf0}
-.expand-btn{font:inherit;font-family:Archivo,sans-serif;font-size:.83rem;padding:5px 11px;
-  border:1px solid var(--rule);background:transparent;color:var(--ink-2);cursor:pointer}
+.expand-btn{font:inherit;font-family:"Instrument Sans",sans-serif;font-size:.83rem;padding:5px 12px;
+  border:1px solid var(--rule);background:transparent;color:var(--ink-2);cursor:pointer;border-radius:99px}
 .expand-btn:hover{border-color:var(--received);color:var(--received)}
 tr.detail-row{display:none}
 tr.detail-row.show{display:table-row}
 tr.detail-row td{padding:0 0 22px;border-bottom:1px solid var(--rule-2)}
-.detail-box{background:var(--surface);border:1px solid var(--rule);padding:16px 18px}
+.detail-box{background:var(--surface);border:1px solid var(--rule);padding:16px 18px;border-radius:var(--r)}
 .hashrow{display:grid;grid-template-columns:130px 62px 1fr;gap:12px;padding:6px 0;
   border-bottom:1px solid var(--rule-2);font-size:.83rem;align-items:baseline}
 .hashrow:last-child{border-bottom:0}
@@ -120,7 +135,7 @@ tr.detail-row td{padding:0 0 22px;border-bottom:1px solid var(--rule-2)}
 .empty{padding:44px 0;color:var(--ink-2);text-align:center}
 
 .pager{display:flex;align-items:center;gap:16px;justify-content:center;margin:28px 0 0;font-size:.9rem}
-.pager button{font:inherit;font-family:Archivo,sans-serif;font-size:.87rem;padding:8px 16px;
+.pager button{font:inherit;font-family:"Instrument Sans",sans-serif;font-size:.87rem;padding:8px 16px;
   border:1px solid var(--rule);background:transparent;color:var(--ink);cursor:pointer}
 .pager button:hover:not(:disabled){border-color:var(--received);color:var(--received)}
 .pager button:disabled{opacity:.4;cursor:default}
