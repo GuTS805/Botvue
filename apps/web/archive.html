@@ -358,11 +358,15 @@ function render() {
   rows.forEach((p) => {
     const tr = document.createElement('tr');
     // A 2xx on a property that sent nothing is the thing worth marking; a 4xx here
-    // is the site being straight with the caller.
+    // is the site being straight with the caller. Googlebot is excluded: its 200
+    // carried the real article, which is the comparison the whole finding rests on —
+    // marking it would say the control was deceived too.
     const statuses = Object.entries(p.agents || {})
       .filter(([a]) => a !== 'chrome')
       .map(([agent, r]) => {
-        const misleading = String(r.status).startsWith('2') && p.decision === 'block';
+        const misleading = String(r.status).startsWith('2')
+          && p.decision === 'block'
+          && agent !== 'googlebot';
         return '<span class="pill' + (misleading ? ' bad-status' : '') + '">' + agent + ' ' + r.status + '</span>';
       }).join('');
 
