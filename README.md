@@ -250,7 +250,6 @@ apps/web/    the public page and URL checker
 packages/
   chain/     Hedera consensus attestation, x402 settlement
   agent/     a demo agent that discovers, pays, and verifies
-  contracts/ FindingRegistry, with an unpermissioned dispute path
 evidence/    frozen observations with hashes, and the stub bodies verbatim
 ```
 

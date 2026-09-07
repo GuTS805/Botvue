@@ -162,20 +162,6 @@ Price defaults to 0.01 HBAR. Change it with `BOTVUE_PRICE_TINYBAR`.
 
 ---
 
-## Contracts
-
-```bash
-cd packages/contracts
-forge test -vv
-forge script script/Deploy.s.sol:Deploy --rpc-url "$RPC_URL" \
-  --private-key "$PRIVATE_KEY" --broadcast
-```
-
-Deploy to a network Subgraph Studio indexes — Base Sepolia or Arbitrum Sepolia — not to
-Hedera, which The Graph's decentralised network does not index.
-
----
-
 ## When something looks wrong
 
 **Every crawler seems to receive completely different content.** Check `brotli` and
