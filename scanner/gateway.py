@@ -177,10 +177,16 @@ def evidence_all() -> dict:
         return {"capturedAt": None, "note": "", "properties": []}
 
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    properties = [
-        {**record, "decision": DECISION.get(record["verdict"], "pass")}
-        for record in manifest["properties"]
-    ]
+    properties = []
+    for record in manifest["properties"]:
+        # Response headers are per-record evidence a reader can ask for by refetching the
+        # page (see /evidence?domain=), not something the archive table renders — carrying
+        # them here roughly doubles the payload for no reader-visible benefit.
+        agents = {
+            agent: {k: v for k, v in r.items() if k != "headers"}
+            for agent, r in record.get("agents", {}).items()
+        }
+        properties.append({**record, "agents": agents, "decision": DECISION.get(record["verdict"], "pass")})
     return {
         "capturedAt": manifest["captured_at"],
         "note": manifest["note"],

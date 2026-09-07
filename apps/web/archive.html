@@ -69,6 +69,8 @@ header{padding:26px 0 0}
 .search input:focus{border-color:var(--full);outline:none}
 .count-line{font-size:.86rem;color:var(--ink-soft);margin:12px 0 0}
 
+/* Wide content scrolls inside its own box; the page itself must never scroll sideways. */
+.scroller{overflow-x:auto;-webkit-overflow-scrolling:touch}
 table{width:100%;border-collapse:collapse;font-size:.92rem;margin:18px 0 0}
 th,td{text-align:left;padding:10px 14px 10px 0;border-bottom:1px solid var(--rule);vertical-align:top}
 th{font-weight:600;font-size:.8rem;color:var(--ink-soft);cursor:pointer;user-select:none;white-space:nowrap}
@@ -96,6 +98,11 @@ tr.detail-row td{padding:0 0 22px;border-bottom:1px solid var(--rule)}
 .hashrow:last-child{border-bottom:0}
 .hashrow code{font-family:"IBM Plex Mono",monospace;font-size:.76rem;color:var(--ink-soft);overflow-wrap:anywhere}
 .empty{padding:40px 0;color:var(--ink-soft);text-align:center}
+.pager{display:flex;align-items:center;gap:16px;justify-content:center;margin:26px 0 0;font-size:.9rem}
+.pager button{font:inherit;font-size:.86rem;padding:8px 16px;border:1px solid var(--rule);background:transparent;color:var(--ink);cursor:pointer}
+.pager button:hover:not(:disabled){border-color:var(--full);color:var(--full)}
+.pager button:disabled{opacity:.4;cursor:default}
+.pager span{color:var(--ink-soft)}
 
 footer{border-top:1px solid var(--rule);padding:38px 0 60px;font-size:.9rem;color:var(--ink-soft);margin-top:60px}
 footer a{color:var(--ink-soft)}
@@ -105,7 +112,6 @@ footer a{color:var(--ink-soft)}
   .stat{border-left:0;border-top:1px solid var(--rule)}
   .stat:first-child{border-top:0}
   .search{flex:1 1 100%;margin-left:0}
-  .scroller{overflow-x:auto}
   table{min-width:640px}
 }
 </style>
@@ -151,6 +157,11 @@ footer a{color:var(--ink-soft)}
   </table>
   </div>
   <p class="empty" id="empty" hidden>No property matches this filter.</p>
+  <div class="pager" id="pager" hidden>
+    <button type="button" id="prevPage">&larr; Previous</button>
+    <span id="pageLabel"></span>
+    <button type="button" id="nextPage">Next &rarr;</button>
+  </div>
 </main>
 
 <footer class="wrap">
@@ -174,6 +185,8 @@ let activeVerdict = 'all';
 let query = '';
 let sortKey = 'verdict';
 let sortDir = 1;
+let page = 0;
+const PAGE_SIZE = 25;
 const SEVERITY = { block: 0, flag: 1, pass: 2 };
 
 fetch(API + '/evidence/all').then(r => r.json()).then(d => {
@@ -222,7 +235,7 @@ function buildFilters() {
     b.type = 'button';
     b.textContent = label;
     b.setAttribute('aria-pressed', String(activeVerdict === key));
-    b.addEventListener('click', () => { activeVerdict = key; render(); buildFilters(); });
+    b.addEventListener('click', () => { activeVerdict = key; page = 0; render(); buildFilters(); });
     return b;
   };
 
@@ -234,6 +247,7 @@ function buildFilters() {
 
 document.getElementById('searchInput').addEventListener('input', (e) => {
   query = e.target.value.trim().toLowerCase();
+  page = 0;
   render();
 });
 
@@ -243,9 +257,13 @@ document.querySelectorAll('th[data-sort]').forEach(th => {
     if (sortKey === key) sortDir *= -1; else { sortKey = key; sortDir = 1; }
     document.querySelectorAll('th .arrow').forEach(a => a.textContent = '');
     th.querySelector('.arrow').textContent = sortDir === 1 ? '↑' : '↓';
+    page = 0;
     render();
   });
 });
+
+document.getElementById('prevPage').addEventListener('click', () => { page--; render(); window.scrollTo({top: document.getElementById('table').offsetTop - 20, behavior: 'smooth'}); });
+document.getElementById('nextPage').addEventListener('click', () => { page++; render(); window.scrollTo({top: document.getElementById('table').offsetTop - 20, behavior: 'smooth'}); });
 
 function summariseCrawlers(p) {
   const ratios = Object.entries(p.word_ratio || {});
@@ -259,10 +277,10 @@ function summariseCrawlers(p) {
 }
 
 function render() {
-  let rows = all.filter(p => activeVerdict === 'all' || p.verdict === activeVerdict);
-  if (query) rows = rows.filter(p => p.domain.toLowerCase().includes(query));
+  let matched = all.filter(p => activeVerdict === 'all' || p.verdict === activeVerdict);
+  if (query) matched = matched.filter(p => p.domain.toLowerCase().includes(query));
 
-  rows = rows.slice().sort((a, b) => {
+  matched = matched.slice().sort((a, b) => {
     let cmp = 0;
     if (sortKey === 'verdict') cmp = (SEVERITY[a.decision] ?? 2) - (SEVERITY[b.decision] ?? 2);
     else cmp = String(a[sortKey] || '').localeCompare(String(b[sortKey] || ''));
@@ -270,9 +288,19 @@ function render() {
   });
 
   document.getElementById('countLine').textContent =
-    rows.length + (rows.length === 1 ? ' property' : ' properties') +
+    matched.length + (matched.length === 1 ? ' property' : ' properties') +
     (activeVerdict !== 'all' ? ' — filtered' : '');
-  document.getElementById('empty').hidden = rows.length !== 0;
+  document.getElementById('empty').hidden = matched.length !== 0;
+
+  const pageCount = Math.max(1, Math.ceil(matched.length / PAGE_SIZE));
+  page = Math.min(page, pageCount - 1);
+  const rows = matched.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
+
+  const pager = document.getElementById('pager');
+  pager.hidden = matched.length <= PAGE_SIZE;
+  document.getElementById('pageLabel').textContent = 'Page ' + (page + 1) + ' of ' + pageCount;
+  document.getElementById('prevPage').disabled = page === 0;
+  document.getElementById('nextPage').disabled = page >= pageCount - 1;
 
   const tbody = document.getElementById('rows');
   tbody.innerHTML = '';
