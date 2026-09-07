@@ -1,10 +1,15 @@
 /**
- * Pays a 402 challenge on Hedera and returns proof.
+ * Signs a Hedera transfer for the Blocky402 facilitator to submit.
  *
- * The proof is just a transaction id. It is not a signature or a receipt this agent issues —
- * it is a pointer into the public ledger, so the service verifies it by reading the same
- * mirror node the agent could read. Neither side has to trust the other's account of what
- * happened.
+ * The agent never talks to Blocky402 directly and never broadcasts anything itself — x402's
+ * Hedera "exact" scheme has the facilitator sponsor the network fee and submit the
+ * transaction on the client's behalf. This only builds a transfer, signs it as the paying
+ * account, and hands the frozen, unsubmitted bytes to the resource server as proof.
+ *
+ * The fee-payer account is never hardcoded here: it comes from `terms.feePayer`, which the
+ * server read live from Blocky402's own `/supported` endpoint. Building the transaction with
+ * the wrong fee payer is a silent-wrong-network failure — the transaction looks correct,
+ * signs correctly, and the facilitator simply refuses to recognise itself as the sponsor.
  */
 
 import {
@@ -13,17 +18,24 @@ import {
   Hbar,
   HbarUnit,
   PrivateKey,
+  TransactionId,
   TransferTransaction,
 } from "@hashgraph/sdk";
 import "dotenv/config";
 
 import type { Terms } from "./discover.js";
 
-export interface Payment {
-  transactionId: string;
+// Hedera's x402 exact scheme identifies native HBAR by this HTS-style asset id, not the
+// string "HBAR" — every other value here is an actual HTS token id (e.g. USDC).
+const HBAR_ASSET_ID = "0.0.0";
+
+export interface SignedPayment {
+  /** base64-encoded, payer-signed, unsubmitted transaction bytes. */
+  transactionBase64: string;
   amountTinybar: number;
   payTo: string;
   network: string;
+  feePayer: string;
 }
 
 function parseKey(raw: string): PrivateKey {
@@ -51,7 +63,7 @@ function parseKey(raw: string): PrivateKey {
   );
 }
 
-export function payerClient(network: string): { client: Client; accountId: AccountId } {
+function credentials(): { accountId: AccountId; privateKey: PrivateKey } {
   const id = process.env.HEDERA_ACCOUNT_ID;
   const key = process.env.HEDERA_PRIVATE_KEY;
   if (!id || !key) {
@@ -60,46 +72,72 @@ export function payerClient(network: string): { client: Client; accountId: Accou
         "to .env and fill them in from portal.hedera.com.",
     );
   }
-  const accountId = AccountId.fromString(id);
-  const client = network.includes("mainnet") ? Client.forMainnet() : Client.forTestnet();
-  client.setOperator(accountId, parseKey(key));
-  return { client, accountId };
+  return { accountId: AccountId.fromString(id), privateKey: parseKey(key) };
 }
 
-export async function pay(terms: Terms): Promise<Payment> {
+function hederaClient(network: string): Client {
+  // "hedera:testnet" (CAIP-2, from the 402 body) -> pick the matching SDK client. Never
+  // assume testnet — an unrecognised network id is a configuration problem to surface, not
+  // silently default away.
+  if (network === "hedera:mainnet") return Client.forMainnet();
+  if (network === "hedera:testnet") return Client.forTestnet();
+  throw new Error(`unsupported network: ${JSON.stringify(network)}`);
+}
+
+export async function sign(terms: Terms): Promise<SignedPayment> {
   if (terms.scheme !== "exact") {
     throw new Error(`unsupported payment scheme: ${terms.scheme}`);
   }
-  if (terms.asset !== "HBAR") {
+  if (terms.asset !== HBAR_ASSET_ID) {
     throw new Error(`unsupported asset: ${terms.asset}`);
+  }
+  if (!terms.feePayer) {
+    throw new Error("terms.feePayer is empty — cannot name a fee payer on the transaction.");
   }
 
   const amount = Number(terms.amount);
-  const { client, accountId } = payerClient(terms.network);
+  const { accountId, privateKey } = credentials();
   const recipient = AccountId.fromString(terms.payTo);
+  const feePayer = AccountId.fromString(terms.feePayer);
+  const client = hederaClient(terms.network);
 
-  const response = await new TransferTransaction()
+  // The fee payer — not the caller's own account — owns the transaction id, because the
+  // facilitator is the one who will actually broadcast and pay for this. The caller's
+  // signature only authorises the debit from its own account.
+  const frozen = new TransferTransaction()
+    .setTransactionId(TransactionId.generate(feePayer))
     .addHbarTransfer(accountId, Hbar.from(-amount, HbarUnit.Tinybar))
     .addHbarTransfer(recipient, Hbar.from(amount, HbarUnit.Tinybar))
     .setTransactionMemo("botvue: one url check")
-    .execute(client);
+    .freezeWith(client);
 
-  // Wait for consensus before presenting the id: the service looks the transaction up on
-  // the mirror node, and an id that has not reached consensus is not there yet.
-  await response.getReceipt(client);
+  const signed = await frozen.sign(privateKey);
+  const transactionBase64 = Buffer.from(signed.toBytes()).toString("base64");
   client.close();
 
   return {
-    transactionId: response.transactionId.toString(),
+    transactionBase64,
     amountTinybar: amount,
     payTo: terms.payTo,
     network: terms.network,
+    feePayer: terms.feePayer,
   };
 }
 
-export function proofHeader(payment: Payment): string {
-  return Buffer.from(
-    JSON.stringify({ transactionId: payment.transactionId }),
-    "utf8",
-  ).toString("base64");
+/** The x402 v2 PaymentPayload for the Hedera exact scheme, base64-encoded for X-PAYMENT. */
+export function proofHeader(payment: SignedPayment, terms: Terms): string {
+  const paymentPayload = {
+    x402Version: 2,
+    accepted: {
+      scheme: terms.scheme,
+      network: payment.network,
+      amount: String(payment.amountTinybar),
+      asset: terms.asset,
+      payTo: payment.payTo,
+      maxTimeoutSeconds: terms.maxTimeoutSeconds,
+      extra: { feePayer: payment.feePayer },
+    },
+    payload: { transaction: payment.transactionBase64 },
+  };
+  return Buffer.from(JSON.stringify(paymentPayload), "utf8").toString("base64");
 }

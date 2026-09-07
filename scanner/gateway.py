@@ -21,13 +21,7 @@ from urllib.parse import urlparse
 
 from .agents import AGENTS, BASELINE, CONTROL
 from .attest import QueueAttestor
-from .payments import (
-    OpenVerifier,
-    PaymentTerms,
-    PaymentVerifier,
-    terms_from_env,
-    verifier_from_env,
-)
+from .payments import OpenVerifier, build_payment_layer
 from .service import DECISION, EXPLANATION, CheckResult, check
 
 app = FastAPI(
@@ -51,8 +45,7 @@ app = FastAPI(
 WEB = Path(__file__).resolve().parents[1] / "apps" / "web"
 
 attestor = QueueAttestor()
-verifier: PaymentVerifier = verifier_from_env()
-terms: PaymentTerms = terms_from_env()
+verifier, terms = build_payment_layer()
 
 
 class CheckRequest(BaseModel):

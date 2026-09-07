@@ -3,19 +3,21 @@
  *
  *   npx tsx src/run.ts <url> [--service http://localhost:8000]
  *
- * The whole point is the last step. After paying and receiving a verdict, the agent
- * re-checks the payment against the public mirror node itself. It does not have to believe
- * the service about what it was charged, and it does not have to believe the service about
- * what it observed — every response body is reported as a hash the agent can recompute.
+ * The whole point is the last beat. The server settles payment through Blocky402, then
+ * independently re-checks that settlement against Hedera's public mirror node before ever
+ * reporting success — two sources agreeing on one truth, printed here exactly as the server
+ * saw it, including the case where they disagree.
  */
 
-import { discover, termsFromChallenge, type Terms } from "./discover.js";
-import { pay, proofHeader } from "./pay.js";
+import { discover, termsFromChallenge } from "./discover.js";
+import { proofHeader, sign } from "./pay.js";
 
-const MIRROR: Record<string, string> = {
-  "hedera-testnet": "https://testnet.mirrornode.hedera.com",
-  "hedera-mainnet": "https://mainnet.mirrornode.hedera.com",
-};
+interface CrossCheck {
+  agrees: boolean;
+  detail: string;
+  mirrorStatus?: string | null;
+  mirrorCreditedTinybar?: number | null;
+}
 
 interface Verdict {
   url: string;
@@ -26,8 +28,19 @@ interface Verdict {
   word_ratio: Record<string, number>;
   statuses: Record<string, number | string>;
   evidence: Record<string, string>;
-  payment?: { transactionId?: string; paidTinybar?: number };
+  payment?: {
+    settled?: boolean;
+    transactionId?: string;
+    paidTinybar?: number;
+    reason?: string;
+    crossCheck?: CrossCheck | null;
+  };
 }
+
+// A slow or unreachable facilitator must not hang the agent forever — the gateway itself
+// bounds its own facilitator calls, but the network hop to the gateway needs its own limit
+// too, with a message that says what is actually being waited on.
+const REQUEST_TIMEOUT_MS = 45_000;
 
 function arg(name: string, fallback: string): string {
   const i = process.argv.indexOf(name);
@@ -41,30 +54,40 @@ async function callCheck(
 ): Promise<{ status: number; body: any }> {
   const headers: Record<string, string> = { "content-type": "application/json" };
   if (proof) headers["X-PAYMENT"] = proof;
-  const res = await fetch(found.endpoint, {
-    method: found.method,
-    headers,
-    body: JSON.stringify({ [found.urlField]: target }),
-  });
-  return { status: res.status, body: await res.json() };
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    const res = await fetch(found.endpoint, {
+      method: found.method,
+      headers,
+      body: JSON.stringify({ [found.urlField]: target }),
+      signal: controller.signal,
+    });
+    return { status: res.status, body: await res.json() };
+  } catch (err) {
+    if (err instanceof Error && err.name === "AbortError") {
+      throw new Error(
+        `the service did not respond within ${REQUEST_TIMEOUT_MS / 1000}s — it may be ` +
+          "waiting on the Blocky402 facilitator",
+      );
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
-async function confirmPayment(terms: Terms, transactionId: string): Promise<string> {
-  const host = MIRROR[terms.network];
-  if (!host) return "unknown network, cannot confirm independently";
-  const id = transactionId.includes("@")
-    ? `${transactionId.split("@")[0]}-${transactionId.split("@")[1].replace(".", "-")}`
-    : transactionId;
-
-  const res = await fetch(`${host}/api/v1/transactions/${id}`);
-  if (!res.ok) return `mirror node returned ${res.status}`;
-  const tx = (await res.json()).transactions?.[0];
-  if (!tx) return "not found on the mirror node";
-
-  const credited = (tx.transfers ?? [])
-    .filter((t: any) => t.account === terms.payTo && t.amount > 0)
-    .reduce((sum: number, t: any) => sum + t.amount, 0);
-  return `${tx.result}, ${credited} tinybar to ${terms.payTo} (checked independently)`;
+function printCrossCheck(crossCheck: CrossCheck | null | undefined): void {
+  if (!crossCheck) return;
+  if (crossCheck.agrees) {
+    console.log(`  cross-check: ${crossCheck.detail}`);
+  } else {
+    // This is the interesting case, not the embarrassing one: the server settled through
+    // Blocky402 but its own independent mirror-node check did not confirm it yet (or found
+    // something different) — and it said so rather than papering over the gap.
+    console.log(`  CROSS-CHECK DISAGREEMENT: ${crossCheck.detail}`);
+  }
 }
 
 async function main() {
@@ -81,8 +104,6 @@ async function main() {
   console.log(`  takes field "${found.urlField}", payment expected: ${found.paid}`);
   console.log(`  service reports payment required: ${found.paymentRequired}\n`);
 
-  // Belt and braces: if the spec documents a 402 but the running service says payment is
-  // off, we are not talking to the service we think we are.
   if (found.paid && !found.paymentRequired) {
     console.log("  note: this service documents payment but is running open\n");
   }
@@ -91,20 +112,30 @@ async function main() {
 
   if (call.status === 402) {
     const terms = termsFromChallenge(call.body);
-    console.log(`402 payment required: ${terms.amount} tinybar of ${terms.asset} to ${terms.payTo}`);
-    const payment = await pay(terms);
-    console.log(`  paid, transaction ${payment.transactionId}`);
+    console.log(
+      `402 payment required: ${terms.amount} tinybar of ${terms.asset} to ${terms.payTo}`,
+    );
+    console.log(`  fee payer (Blocky402): ${terms.feePayer}`);
 
-    call = await callCheck(found, target, proofHeader(payment));
-    if (call.status === 402) throw new Error(`payment rejected: ${call.body.error}`);
+    const payment = await sign(terms);
+    console.log(`  signed a transfer for the facilitator to submit`);
 
-    const confirmation = await confirmPayment(terms, payment.transactionId);
-    console.log(`  ledger says: ${confirmation}\n`);
+    call = await callCheck(found, target, proofHeader(payment, terms));
+    if (call.status === 402) {
+      throw new Error(`payment rejected: ${call.body.error}`);
+    }
+
+    const receipt = call.body?.payment;
+    console.log(`  settled: ${receipt?.transactionId ?? "(no transaction id returned)"}`);
+    printCrossCheck(receipt?.crossCheck);
+    console.log();
   } else {
     console.log("service is running without payment required\n");
   }
 
-  if (call.status !== 200) throw new Error(`check failed: ${call.status}`);
+  if (call.status !== 200) {
+    throw new Error(`check failed: HTTP ${call.status} — ${call.body?.error ?? ""}`);
+  }
   const verdict = call.body as Verdict;
 
   console.log(`verdict: ${verdict.verdict}  ->  ${verdict.decision.toUpperCase()}`);

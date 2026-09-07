@@ -24,12 +24,17 @@ export interface Discovered {
 
 export interface Terms {
   scheme: string;
+  /** CAIP-2 network id, e.g. "hedera:testnet". Read from the 402 body — never assumed. */
   network: string;
   asset: string;
   amount: string;
   payTo: string;
+  maxTimeoutSeconds: number;
+  /** The facilitator's fee-payer account. The signed transaction must name this account as
+   * fee payer or Blocky402 will not recognise itself as the sponsor. Read from the 402
+   * body's `extra.feePayer`, never hardcoded here. */
+  feePayer: string;
   proofHeader: string;
-  verifiedAgainst?: string;
 }
 
 const URL_FIELD_HINTS = ["url", "uri", "href", "target", "page", "link"];
@@ -93,17 +98,25 @@ export async function discover(root: string): Promise<Discovered> {
   );
 }
 
-/** Reads terms from a 402 body, which carries everything needed to pay. */
+/** Reads terms from a 402 body, which carries everything needed to sign a payment. */
 export function termsFromChallenge(challenge: any): Terms {
   const accepts = challenge?.accepts?.[0];
   if (!accepts) throw new Error("402 body did not describe how to pay");
+  const feePayer = accepts.extra?.feePayer;
+  if (!feePayer) {
+    throw new Error(
+      "402 body has no accepts[0].extra.feePayer — cannot build a transaction the " +
+        "facilitator will accept as fee payer.",
+    );
+  }
   return {
     scheme: accepts.scheme,
     network: accepts.network,
     asset: accepts.asset,
     amount: String(accepts.amount),
     payTo: accepts.payTo,
+    maxTimeoutSeconds: Number(accepts.maxTimeoutSeconds ?? 3600),
+    feePayer,
     proofHeader: challenge?.proof?.header ?? "X-PAYMENT",
-    verifiedAgainst: challenge?.verifiedAgainst,
   };
 }
