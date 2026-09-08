@@ -19,6 +19,29 @@ from .attest import Attestor, NullAttestor, build as build_attestation
 from .fetch import TIMEOUT, fetch_one
 from .grade import Verdict, grade
 
+def normalise_url(raw: str) -> tuple[str, str | None]:
+    """Returns the URL to fetch, or an explanation of why it cannot be one.
+
+    Someone typing a bare domain into the box means a website, so that is accepted and
+    completed. Anything that is not a web address is refused outright rather than answered
+    with an empty result. Lives here rather than in an adapter because it is validation,
+    not transport -- every adapter needs the same answer to "is this checkable at all".
+    """
+    candidate = (raw or "").strip()
+    if not candidate:
+        return "", "No URL given."
+    if "://" not in candidate:
+        candidate = "https://" + candidate
+
+    parsed = urlparse(candidate)
+    if parsed.scheme not in ("http", "https"):
+        return "", f"Only http and https can be checked, not {parsed.scheme!r}."
+    host = parsed.hostname or ""
+    if "." not in host or host.startswith(".") or host.endswith("."):
+        return "", f"{raw!r} is not a web address. Try something like example.com."
+    return candidate, None
+
+
 # What the caller should do with the body. `block` is reserved for responses that would
 # otherwise be mistaken for the page: an honest 4xx already tells the agent it got nothing,
 # so there is nothing to protect it from.
