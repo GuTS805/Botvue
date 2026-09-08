@@ -237,6 +237,13 @@ def archive_page() -> FileResponse:
     return FileResponse(WEB / "archive.html")
 
 
+@app.get("/og.png", include_in_schema=False)
+def social_card() -> FileResponse:
+    # Referenced by absolute URL from the page's og:image, so it has to be reachable
+    # without the crawler that fetches it running any JavaScript.
+    return FileResponse(WEB / "og.png", media_type="image/png")
+
+
 @app.get("/terms", summary="What a paid call costs and how payment is verified.")
 def payment_terms() -> dict:
     return terms.challenge()

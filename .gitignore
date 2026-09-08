@@ -33,5 +33,6 @@ attestations/submitted/
 gw.log
 .playwright-mcp/
 *.png
+!apps/web/og.png
 corpus/cache-*/
 evidence/manifest-*.json
