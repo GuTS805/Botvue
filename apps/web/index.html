@@ -599,6 +599,21 @@ tr.hi td{background:rgba(255,77,106,.06)}
 .copy:hover{color:#fff;border-color:rgba(108,198,255,.45)}
 
 /* ── Observation to record ──────────────────────────────────────────────── */
+/* The shape of a settlement receipt, not a live one: this page's own tool never
+   pays, so showing invented numbers here would be exactly the kind of unverifiable
+   surface the rest of the page argues against. Field names are read from the schema. */
+.receipt{margin-top:22px;border:1px solid var(--rule);border-radius:var(--r);
+  background:linear-gradient(180deg, rgba(18,26,41,.7), rgba(14,20,32,.5));
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);overflow:hidden}
+.receipt-bar{display:flex;align-items:center;gap:10px;padding:11px 18px;
+  border-bottom:1px solid var(--rule-2);background:rgba(0,0,0,.24)}
+.receipt-bar b{font-size:.78rem;font-weight:600;color:var(--ink)}
+.receipt-bar span{font-family:"JetBrains Mono",monospace;font-size:.72rem;color:var(--ink-3)}
+.receipt pre{margin:0;padding:16px 18px;font-family:"JetBrains Mono",monospace;
+  font-size:.78rem;line-height:1.7;color:var(--ink-2);overflow-x:auto}
+.receipt pre .k{color:var(--ink)}
+.receipt pre .c{color:var(--ink-3)}
+.receipt pre .v{color:var(--honest)}
 .facts{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .fact{border:1px solid var(--rule);border-radius:var(--r);padding:18px;
   background:linear-gradient(180deg, var(--surface-2), var(--surface))}
@@ -1062,6 +1077,25 @@ footer{padding:44px 0 60px;border-top:1px solid var(--rule-2);margin-top:0}
         <p class="hint" style="margin-top:18px">The same document an agent reads. Fetch it
           yourself at <a href="/terms">/terms</a>, or read the whole flow in
           <a href="https://github.com/GuTS805/Botvue#the-gateway">the source</a>.</p>
+
+        <div class="receipt">
+          <div class="receipt-bar"><b>payment</b><span>on a settled call, not this page's own free preview</span></div>
+          <pre><span class="c">// this project's own standard applied to itself: no invented numbers.</span>
+<span class="k">"settled"</span>: <span class="v">true</span>,
+<span class="k">"transactionId"</span>: <span class="v">"0.0.xxxxxxx@…"</span>,     <span class="c">// Hedera testnet tx id</span>
+<span class="k">"paidTinybar"</span>: <span class="v">1000000</span>,
+<span class="k">"reason"</span>: <span class="v">"settled through Blocky402"</span>,
+<span class="k">"crossCheck"</span>: {
+  <span class="k">"agrees"</span>: <span class="v">true</span>,          <span class="c">// re-checked against Hedera's public mirror node</span>
+  <span class="k">"mirrorStatus"</span>: <span class="v">"SUCCESS"</span>,
+  <span class="k">"mirrorCreditedTinybar"</span>: <span class="v">1000000</span>
+}</pre>
+        </div>
+        <p class="hint">Blocky402 says a payment settled; this is what confirms it rather
+          than taking that word for it — <span class="m">crossCheck</span> is a second,
+          independent read of the same transaction from Hedera's own mirror node. A
+          disagreement here is recorded, not hidden. Field names come straight from
+          <a href="https://github.com/GuTS805/Botvue/blob/main/scanner/payments.py">payments.py</a>.</p>
       </div>
     </div>
   </section>

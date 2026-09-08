@@ -118,7 +118,12 @@ class CheckResponse(BaseModel):
                           description="The crawler-only text this verdict rests on, quoted "
                                       "rather than described, so the caller can judge it.")
     attestation: dict
-    payment: dict = Field(default_factory=dict)
+    payment: dict = Field(default_factory=dict,
+                          description="Settlement receipt on a paid call: settled, "
+                                      "transactionId, paidTinybar, reason, and crossCheck "
+                                      "-- whether Hedera's public mirror node independently "
+                                      "confirms what the facilitator reported. Empty on the "
+                                      "free preview path, which never touches payment.")
     elapsed_ms: int
 
 
