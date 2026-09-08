@@ -331,6 +331,19 @@ tr.hi td{background:var(--ground-2)}
 .bar{height:6px;background:var(--ground-2);margin-bottom:8px;border-radius:99px;overflow:hidden}
 .bar i{display:block;height:100%;background:var(--received);border-radius:99px}
 .bar.low i{background:var(--lie)}
+/* The text a verdict rests on, quoted rather than described. A finding this project
+   would not accept from anyone else is one that names a category without showing the
+   sentence, so the highest-severity classification gets the same verbatim treatment as
+   the 161-byte stub above. */
+.quotes{margin-top:18px;display:grid;gap:10px}
+.quote{border-left:3px solid var(--absent);padding:2px 0 2px 14px}
+.quote.severe{border-left-color:var(--lie)}
+.quote .qmeta{display:flex;flex-wrap:wrap;gap:8px;align-items:baseline;
+  font-size:.72rem;letter-spacing:.04em;color:var(--ink-2)}
+.quote .qclass{font-family:"JetBrains Mono",monospace;font-weight:700;color:var(--ink)}
+.quote.severe .qclass{color:var(--lie)}
+.quote q{display:block;quotes:none;margin-top:6px;font-family:"JetBrains Mono",monospace;
+  font-size:.82rem;line-height:1.62;color:var(--ink)}
 .evidence{margin-top:24px;border-top:1px solid var(--rule-2);padding-top:16px}
 .evidence summary{cursor:pointer;font-weight:600;font-size:.94rem}
 .evidence summary:hover{color:var(--received)}
@@ -586,6 +599,7 @@ footer a{color:var(--ink-2)}
           <div class="cached" id="cached" hidden></div>
           <div class="decision" id="decision"></div>
           <p id="explain" class="prose" style="margin-top:.7rem"></p>
+          <div class="quotes" id="quotes"></div>
           <div class="ratios" id="ratios"></div>
 
           <details class="evidence">
@@ -1047,8 +1061,38 @@ function render(d, url) {
     }
   });
 
+  renderQuotes(d);
   renderEvidence(d, url);
   result.classList.add('show');
+}
+
+// A classification name on its own is a claim. These are the bytes behind it.
+const SEVERE = ['PROMPT_INJECTION', 'POLICY_VIOLATION'];
+const CLASS_LABEL = {
+  PROMPT_INJECTION: 'instruction aimed at the reading agent',
+  POLICY_VIOLATION: 'policy violation',
+  PROMOTIONAL: 'promotional insert',
+  MACHINE_ONLY: 'served only to crawlers',
+  STUB: 'the entire body served to this crawler',
+};
+
+function renderQuotes(d) {
+  const box = document.getElementById('quotes');
+  box.innerHTML = '';
+  (d.samples || []).forEach((s) => {
+    const el = document.createElement('div');
+    el.className = 'quote' + (SEVERE.includes(s.class) ? ' severe' : '');
+    const meta = document.createElement('div');
+    meta.className = 'qmeta';
+    meta.innerHTML = '<span class="qclass"></span><span></span>';
+    meta.firstChild.textContent = s.class.toLowerCase();
+    meta.lastChild.textContent = (CLASS_LABEL[s.class] || '') + ' · quoted from '
+      + s.agent + "'s response";
+    const q = document.createElement('q');
+    q.textContent = s.text;
+    el.append(meta, q);
+    box.appendChild(el);
+  });
 }
 
 function renderEvidence(d, url) {

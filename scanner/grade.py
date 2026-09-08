@@ -51,6 +51,27 @@ AI_AGENTS = [a for a in AGENTS if a not in (BASELINE, CONTROL)]
 UNJUDGEABLE = ("no-data", "baseline-failed", "thin", "incomplete")
 
 
+# The longest injected sentence measured in the wild runs to about 180 characters, so a
+# hard 220-character cut usually survives one. Usually is not good enough for evidence:
+# a sentence truncated mid-clause reads as if the tool could not quote it, which is the
+# opposite of what an excerpt is for. Cut at the last sentence end instead, and only fall
+# back to a hard cut when the text carries no sentence end at all.
+EXCERPT_CHARS = 260
+EXCERPT_MIN = 80
+
+
+def excerpt(text: str) -> str:
+    """A quotable piece of a block: whole sentences where the text has them."""
+    text = " ".join(text.split())
+    if len(text) <= EXCERPT_CHARS:
+        return text
+    window = text[:EXCERPT_CHARS]
+    cut = max(window.rfind(". "), window.rfind("! "), window.rfind("? "))
+    if cut >= EXCERPT_MIN:
+        return window[: cut + 1]
+    return window.rstrip() + "…"
+
+
 @dataclass
 class Verdict:
     domain: str
@@ -138,6 +159,8 @@ def grade(domain: str, url: str | None = None) -> Verdict:
     marker_headers: dict = {}
     base_blocks = blocks_from_response(base["body"], base["headers"].get("content-type", ""))
     worst = Classification.COSMETIC
+    stub_samples: list[dict] = []
+    subst_samples: list[dict] = []
 
     for a, r in by_agent.items():
         if a == BASELINE or r.get("error"):
@@ -161,6 +184,24 @@ def grade(domain: str, url: str | None = None) -> Verdict:
         # Signal 1, and the cheapest: a 200 that carries almost none of the page.
         if words < STUB_ABSOLUTE_WORDS and v.word_ratio[a] < STUB_WORD_RATIO:
             v.soft_blocked.append(a)
+            # `hay` is folded for comparison — lowercased, punctuation dropped. Quoting
+            # that would misrepresent what the server sent, so the excerpt comes from the
+            # extracted blocks instead. A stub has very few, so this parse is cheap.
+            if a != CONTROL:
+                stub = " ".join(
+                    b.text for b in
+                    blocks_from_response(r["body"], r["headers"].get("content-type", ""))
+                ).strip()
+                if stub:
+                    text = excerpt(stub)
+                    # Several crawlers usually receive the identical stub. Repeating it
+                    # once per agent pads the evidence without adding any; name them all
+                    # against the one quote instead.
+                    same = next((x for x in stub_samples if x["text"] == text), None)
+                    if same:
+                        same["agent"] += ", " + a
+                    else:
+                        stub_samples.append({"agent": a, "class": "STUB", "text": text})
             continue
 
         blocks = blocks_from_response(r["body"], r["headers"].get("content-type", ""))
@@ -171,9 +212,9 @@ def grade(domain: str, url: str | None = None) -> Verdict:
             worst = max(worst, c.classification)
         if a != CONTROL and len(mat) >= MIN_MATERIAL_BLOCKS:
             v.substituted.append(a)
-            if not v.samples:
-                v.samples = [
-                    {"agent": a, "class": c.classification.name, "text": c.block.text[:220]}
+            if not subst_samples:
+                subst_samples = [
+                    {"agent": a, "class": c.classification.name, "text": excerpt(c.block.text)}
                     for c in sorted(mat, key=lambda c: -c.classification)[:4]
                 ]
     v.worst = worst.name
@@ -198,19 +239,23 @@ def grade(domain: str, url: str | None = None) -> Verdict:
 
     if ai_soft and v.control_clean:
         v.verdict = "soft-blocked"
+        v.samples = stub_samples[:4]
         v.reason = ("200 with an empty page for " + ", ".join(ai_soft)
                     + f"; googlebot got the article ({v.similarity.get(CONTROL)})")
     elif ai_subst and v.control_clean and marked:
         v.verdict = "substituted"
+        v.samples = subst_samples
         v.reason = ("crawler-only content for " + ", ".join(ai_subst)
                     + (f"; edge markers: {', '.join(v.differential_headers)}"
                        if v.differential_headers else f"; classified {worst.name.lower()}"))
     elif ai_subst and v.control_clean:
         v.verdict = "crawler-only-text"
+        v.samples = subst_samples
         v.reason = ("text not found in the browser version for " + ", ".join(ai_subst)
                     + "; no promotional or instructional marker, so not counted")
     elif ai_soft or ai_subst:
         v.verdict = "all-bots-differ"
+        v.samples = stub_samples[:4] or subst_samples
         v.reason = f"control diverges too ({v.similarity.get(CONTROL)})"
     elif v.refused:
         v.verdict = "refused"

@@ -110,6 +110,13 @@ class CheckResponse(BaseModel):
     statuses: dict
     evidence: dict = Field(description="SHA-256 of each response body, so the finding can "
                                        "be rechecked later or by someone else.")
+    worst: str = Field(default="COSMETIC",
+                       description="Highest classification reached by any crawler-only "
+                                   "block: COSMETIC, MACHINE_ONLY, PROMOTIONAL, "
+                                   "POLICY_VIOLATION or PROMPT_INJECTION.")
+    samples: list = Field(default_factory=list,
+                          description="The crawler-only text this verdict rests on, quoted "
+                                      "rather than described, so the caller can judge it.")
     attestation: dict
     payment: dict = Field(default_factory=dict)
     elapsed_ms: int

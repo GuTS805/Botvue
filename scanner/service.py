@@ -77,6 +77,8 @@ class CheckResult:
     control_similarity: float | None = None
     statuses: dict = field(default_factory=dict)
     evidence: dict = field(default_factory=dict)
+    worst: str = "COSMETIC"
+    samples: list = field(default_factory=list)
     attestation: dict = field(default_factory=dict)
     elapsed_ms: int = 0
 
@@ -137,6 +139,8 @@ def check(
         control_similarity=verdict.similarity.get(CONTROL),
         statuses=verdict.statuses,
         evidence=evidence,
+        worst=verdict.worst,
+        samples=verdict.samples,
         attestation=receipt,
         elapsed_ms=int((time.perf_counter() - started) * 1000),
     )
