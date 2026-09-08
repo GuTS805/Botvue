@@ -29,14 +29,6 @@ class Classification(IntEnum):
     PROMPT_INJECTION = 4
 
 
-ACTION = {
-    Classification.COSMETIC: "ignore",
-    Classification.MACHINE_ONLY: "flag",
-    Classification.PROMOTIONAL: "flag",
-    Classification.POLICY_VIOLATION: "flag",
-    Classification.PROMPT_INJECTION: "block",
-}
-
 # Structural residue of a Markdown rendering. Present because the format differs, not
 # because the content does.
 _COSMETIC = [
@@ -94,10 +86,6 @@ class Classified:
     block: Block
     classification: Classification
     reason: str
-
-    @property
-    def action(self) -> str:
-        return ACTION[self.classification]
 
     @property
     def is_material(self) -> bool:
