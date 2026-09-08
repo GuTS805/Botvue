@@ -147,7 +147,7 @@ header{padding:22px 0 0}
   color:var(--ink-3);margin:0 0 10px}
 /* The argument on the left, the artifact on the right — the reader meets the
    claim and the thing it is about without scrolling between them. */
-.hero-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.02fr);
+.hero-grid{position:relative;z-index:1;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.02fr);
   gap:56px;align-items:start}
 .hero-copy{padding-top:22px}
 .hero-art{position:relative;min-width:0}
@@ -393,6 +393,193 @@ footer a{color:var(--ink-2)}
   .fact{border-left:0;border-top:1px solid var(--rule)}
   .fact:first-child{border-top:0}
 }
+
+/* ── Motion ──────────────────────────────────────────────────────────────
+   Everything below moves. None of it moves without a reason: a line is drawn
+   in the direction a request travels, a number counts because it was counted,
+   a hash cycles because there are 126 of them. Decoration carrying no
+   information is the one thing this page cannot afford, since the whole
+   argument is that a surface can look like something it is not. */
+
+.reveal{opacity:0;transform:translateY(14px);
+  transition:opacity .7s cubic-bezier(.2,.7,.3,1), transform .7s cubic-bezier(.2,.7,.3,1)}
+.reveal.in{opacity:1;transform:none}
+.reveal[data-d="1"]{transition-delay:.08s}
+.reveal[data-d="2"]{transition-delay:.16s}
+.reveal[data-d="3"]{transition-delay:.24s}
+
+/* A grid in perspective, drifting toward the horizon at the top of the page.
+   It is the ground the hero sits on, and it stops before the first section. */
+.field{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:0;
+  -webkit-mask-image:linear-gradient(to bottom, #000 0%, #000 34%, transparent 78%);
+  mask-image:linear-gradient(to bottom, #000 0%, #000 34%, transparent 78%)}
+.field .grid{position:absolute;inset:-20% -30% -40%;
+  background-image:
+    linear-gradient(to right, rgba(13,20,18,.042) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(13,20,18,.042) 1px, transparent 1px);
+  background-size:74px 74px;
+  transform:perspective(760px) rotateX(58deg) scale(1.5);
+  transform-origin:50% 0%;
+  animation:drift 26s linear infinite}
+@keyframes drift{from{background-position:0 0}to{background-position:0 74px}}
+
+/* Packets crossing the field: short glints, staggered, rather than a
+   continuous stream. The page is not a network monitor. */
+.field .pulse{position:absolute;height:1px;width:190px;
+  background:linear-gradient(90deg, transparent, rgba(22,100,79,.55), transparent);
+  animation:sweep 9s linear infinite;opacity:0}
+@keyframes sweep{
+  0%{opacity:0;transform:translateX(-200px)}
+  12%{opacity:.9}
+  88%{opacity:.9}
+  100%{opacity:0;transform:translateX(102vw)}
+}
+
+/* ── The flow: one request, two answers ─────────────────────────────────
+   The finding in its shortest form, drawn in the same two colours the rest
+   of the page uses for arrived and absent. */
+.flowchart{position:relative;margin:0 0 20px;padding:18px 20px 14px;
+  border:1px solid var(--rule);border-radius:var(--r);
+  background:color-mix(in srgb, var(--surface) 78%, transparent);
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.flowchart svg{display:block;width:100%;height:auto;overflow:visible}
+.flowchart .fl-cap{margin:10px 0 0;font-size:.8rem;color:var(--ink-3);text-align:center;
+  font-style:italic}
+.fl-label{font-family:"JetBrains Mono",monospace;font-size:8.4px;letter-spacing:.02em;
+  fill:var(--ink-2)}
+.fl-label.strong{fill:var(--ink);font-weight:700}
+.fl-label.bad{fill:var(--lie);font-weight:700}
+.fl-label.good{fill:var(--received);font-weight:700}
+.fl-box{fill:var(--surface);stroke:var(--rule)}
+.fl-edge{stroke:var(--rule);stroke-width:1.2;fill:none}
+.fl-edge.live{stroke-dasharray:5 7;animation:flow 1.6s linear infinite}
+.fl-edge.good{stroke:var(--received)}
+.fl-edge.bad{stroke:var(--lie)}
+@keyframes flow{to{stroke-dashoffset:-24}}
+@media (max-width:960px){.flowchart{max-width:520px;margin-inline:auto}}
+
+/* ── 200 OK is not success ───────────────────────────────────────────────
+   The one place on the page that raises its voice. It states the thesis and
+   nothing else, so it gets the whole width and no supporting furniture. */
+.neq{border-top:1px solid var(--rule);padding:74px 0 78px;text-align:center}
+.neq-line{font-family:"Space Grotesk",sans-serif;font-weight:700;
+  letter-spacing:-.05em;line-height:.94;
+  font-size:clamp(2.6rem,9vw,7rem);
+  display:flex;align-items:center;justify-content:center;gap:clamp(14px,3vw,40px);
+  flex-wrap:wrap}
+.neq-line .ok{color:var(--lie)}
+.neq-line .sign{color:var(--ink-3);font-weight:500}
+.neq-line .no{color:var(--ink);position:relative}
+/* Struck through in front of the reader rather than arriving already crossed
+   out: the page makes the correction, it does not present it as given. */
+.neq-line .no::after{content:'';position:absolute;left:-2%;top:52%;height:.055em;width:104%;
+  background:var(--ink);transform:scaleX(0);transform-origin:left;
+  transition:transform .8s cubic-bezier(.3,.8,.3,1) .35s}
+.neq.in .neq-line .no::after{transform:scaleX(1)}
+.neq-cap{margin:30px auto 0;max-width:46ch;color:var(--ink-2);font-size:1.06rem}
+.neq-chain{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;
+  margin-top:40px;font-family:"JetBrains Mono",monospace;font-size:.8rem}
+.neq-chain span{padding:8px 15px;border:1px solid var(--rule);background:var(--surface);
+  border-radius:6px;color:var(--ink-2);white-space:nowrap}
+.neq-chain span.end{border-color:var(--lie);color:var(--lie);font-weight:700}
+.neq-chain i{width:26px;height:1px;background:var(--rule);flex:none}
+@media (max-width:620px){
+  .neq-chain{flex-direction:column}
+  .neq-chain i{width:1px;height:16px}
+}
+
+/* ── The scanner's own instruments ───────────────────────────────────────
+   The strip names the user-agents the check actually sends; the stepper
+   names the stages it actually runs, in order. Neither reports per-stage
+   timing, because one request cannot observe it. */
+.agent-strip{margin-top:20px;padding-top:18px;border-top:1px dashed var(--rule)}
+.agent-strip .track{position:relative;display:flex;justify-content:space-between;
+  align-items:flex-start;gap:6px}
+.agent-strip .track::before{content:'';position:absolute;left:5%;right:5%;top:5px;
+  height:1px;background:var(--rule)}
+.agent-strip .node{position:relative;display:flex;flex-direction:column;align-items:center;
+  gap:9px;flex:1;min-width:0}
+.agent-strip .node i{width:11px;height:11px;border-radius:99px;background:var(--ground-2);
+  border:1px solid var(--absent);flex:none}
+.agent-strip .node.on i{background:var(--received);border-color:var(--received);
+  animation:ping 2.4s ease-out infinite}
+.agent-strip .node.ctrl i{background:var(--honest);border-color:var(--honest)}
+.agent-strip .node span{font-family:"JetBrains Mono",monospace;font-size:.7rem;
+  color:var(--ink-3);text-align:center;overflow-wrap:anywhere;line-height:1.3}
+@keyframes ping{0%{box-shadow:0 0 0 0 rgba(22,100,79,.30)}70%,100%{box-shadow:0 0 0 8px rgba(22,100,79,0)}}
+.agent-strip .live{display:flex;align-items:center;justify-content:center;gap:7px;
+  margin-top:16px;font-family:"JetBrains Mono",monospace;font-size:.68rem;
+  letter-spacing:.12em;color:var(--ink-3)}
+.agent-strip .live i{width:6px;height:6px;border-radius:99px;background:var(--received)}
+
+.stepper{display:none;align-items:center;flex-wrap:wrap;margin-top:18px}
+.stepper.on{display:flex}
+.stepper b{font-family:"JetBrains Mono",monospace;font-weight:400;font-size:.74rem;
+  color:var(--ink-3);padding:6px 11px;border:1px solid var(--rule-2);border-radius:5px;
+  background:var(--surface);transition:color .3s, border-color .3s}
+.stepper b.done{color:var(--received);border-color:color-mix(in srgb, var(--received) 40%, var(--rule-2))}
+.stepper b.now{color:var(--ink);font-weight:700;border-color:var(--ink)}
+.stepper i{width:14px;height:1px;background:var(--rule-2);flex:none}
+
+/* ── The dataset, counted ────────────────────────────────────────────────
+   Numbers count up from zero because they were counted. They are filled from
+   the same archive response as the grid below them, so the two cannot drift. */
+.statmap{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:34px 0 30px}
+.stat{border:1px solid var(--rule);border-radius:var(--r);padding:18px 18px 16px;
+  background:color-mix(in srgb, var(--surface) 80%, transparent);
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+  border-top:2px solid var(--absent);
+  transition:transform .3s cubic-bezier(.2,.7,.3,1), box-shadow .3s}
+.stat:hover{transform:translateY(-3px);box-shadow:var(--lift)}
+.stat.lie{border-top-color:var(--lie)}
+.stat.flag{border-top-color:var(--warn)}
+.stat.honest{border-top-color:var(--honest)}
+.stat.total{border-top-color:var(--ink)}
+.stat b{display:block;font-family:"Space Grotesk",sans-serif;font-size:2.5rem;font-weight:700;
+  letter-spacing:-.045em;line-height:1}
+.stat span{display:block;margin-top:6px;font-size:.85rem;color:var(--ink-2);line-height:1.4}
+@media (max-width:820px){.statmap{grid-template-columns:1fr 1fr}}
+
+/* ── Observation to record ───────────────────────────────────────────────
+   The hash shown cycles through ones actually in the archive rather than
+   scrambling characters. A hash that is not the hash of anything would be a
+   decorative falsehood on a page arguing against exactly that. */
+.chainflow{margin-top:26px;border:1px solid var(--rule);border-radius:var(--r);
+  background:color-mix(in srgb, var(--surface) 80%, transparent);
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);padding:20px 20px 18px}
+.cf-step{display:flex;align-items:center;gap:13px;padding:9px 0}
+.cf-step i{width:9px;height:9px;border-radius:99px;background:var(--rule);flex:none;
+  position:relative;transition:background .4s}
+.cf-step i::before{content:'';position:absolute;left:4px;top:9px;width:1px;height:22px;
+  background:var(--rule)}
+.cf-step:last-child i::before{display:none}
+.cf-step.lit i{background:var(--received)}
+.cf-step em{font-style:normal;font-size:.9rem;color:var(--ink-2);transition:color .4s}
+.cf-step.lit em{color:var(--ink);font-weight:600}
+.cf-hash{font-family:"JetBrains Mono",monospace;font-size:.76rem;color:var(--ink-3);
+  margin-left:auto;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;max-width:46%}
+.cf-note{margin:14px 0 0;font-size:.8rem;color:var(--ink-3)}
+
+/* ── Closing ask ─────────────────────────────────────────────────────────── */
+.cta-band{border-top:1px solid var(--rule);padding:76px 0 84px;text-align:center}
+.cta-band h2{max-width:20ch;margin:0 auto}
+.cta-band p{max-width:52ch;margin:1.1rem auto 0;color:var(--ink-2)}
+.cta-band .hero-ctas{justify-content:center}
+
+/* Surfaces lift on hover rather than glow. The page is paper, and paper
+   catches light by moving. */
+.panel,.info-card{transition:transform .32s cubic-bezier(.2,.7,.3,1), box-shadow .32s}
+.panel:hover,.info-card:hover{transform:translateY(-3px)}
+.panel:hover{box-shadow:var(--lift-lg)}
+
+@media (prefers-reduced-motion:reduce){
+  .reveal{opacity:1;transform:none;transition:none}
+  .field .grid,.fl-edge.live,.agent-strip .node.on i{animation:none}
+  .field .pulse{display:none}
+  .neq-line .no::after{transition:none;transform:scaleX(1)}
+  .panel,.info-card,.stat{transition:none}
+  .panel:hover,.info-card:hover,.stat:hover{transform:none}
+}
 </style>
 </head>
 <body>
@@ -425,6 +612,14 @@ footer a{color:var(--ink-2)}
 <main class="wrap">
 
   <div class="hero">
+   <!-- Four sweeps, offset so they do not read as a repeating loop. -->
+   <div class="field" aria-hidden="true">
+     <div class="grid"></div>
+     <div class="pulse" style="top:22%;animation-delay:0s"></div>
+     <div class="pulse" style="top:47%;animation-delay:2.6s"></div>
+     <div class="pulse" style="top:68%;animation-delay:5.1s"></div>
+     <div class="pulse" style="top:86%;animation-delay:7.4s"></div>
+   </div>
    <div class="hero-grid">
     <div class="hero-copy">
     <span class="eyebrow"><i></i> AI crawler transparency</span>
@@ -444,7 +639,35 @@ footer a{color:var(--ink-2)}
     </div>
 
     <div class="hero-art">
-    <p class="hero-corner">Different internet for machines?</p>
+
+    <!-- The same numbers as the panels further down the page: one measured
+         property, both of its answers. -->
+    <div class="flowchart reveal">
+      <svg viewBox="0 0 340 196" role="img"
+           aria-label="One URL requested twice at the same moment. A browser and Googlebot
+                       receive the article, 1,225 words. GPTBot and PerplexityBot receive
+                       HTTP 200 with an empty page, 38 words.">
+        <text class="fl-label" x="170" y="10" text-anchor="middle">GET / &#183; one URL, one moment</text>
+        <path class="fl-edge live" d="M170 18 V40"/>
+
+        <rect class="fl-box" x="113" y="40" width="114" height="32" rx="7"/>
+        <text class="fl-label strong" x="170" y="60" text-anchor="middle">THE WEBSITE</text>
+
+        <path class="fl-edge good live" d="M170 72 V88 Q170 98 158 98 H86 Q74 98 74 108 V118"/>
+        <path class="fl-edge bad live"  d="M170 72 V88 Q170 98 182 98 H254 Q266 98 266 108 V118"/>
+
+        <text class="fl-label" x="74" y="134" text-anchor="middle">Chrome &#183; Googlebot</text>
+        <path class="fl-edge good" d="M74 142 V154"/>
+        <text class="fl-label good" x="74" y="168" text-anchor="middle">the article</text>
+        <text class="fl-label" x="74" y="182" text-anchor="middle">1,225 words</text>
+
+        <text class="fl-label" x="266" y="134" text-anchor="middle">GPTBot &#183; PerplexityBot</text>
+        <path class="fl-edge bad" d="M266 142 V154"/>
+        <text class="fl-label bad" x="266" y="168" text-anchor="middle">200 OK, empty</text>
+        <text class="fl-label" x="266" y="182" text-anchor="middle">38 words</text>
+      </svg>
+      <p class="fl-cap">Different internet for machines?</p>
+    </div>
 
     <!-- The whole response body, verbatim. Nothing is cropped. -->
     <div class="exhibit-field">
@@ -469,6 +692,18 @@ footer a{color:var(--ink-2)}
     </div>
    </div>
   </div>
+
+  <section class="neq reveal" id="neq">
+    <div class="neq-line">
+      <span class="ok">200 OK</span><span class="sign">&#8800;</span><span class="no">success</span>
+    </div>
+    <p class="neq-cap">An agent reads the status line before it reads the page. A status
+      saying the request succeeded is taken as proof that the content arrived.</p>
+    <div class="neq-chain">
+      <span>HTTP 200</span><i></i><span>agent reads the status</span><i></i>
+      <span>records a success</span><i></i><span class="end">read nothing</span>
+    </div>
+  </section>
 
   <section>
     <div class="prose">
@@ -520,6 +755,15 @@ footer a{color:var(--ink-2)}
       <p>Every property measured, grouped by who owns it. Publishers do not decide this page
         by page — they decide it once, and it lands on everything they run. Which is why
         these read as solid blocks rather than scattered noise.</p>
+    </div>
+
+    <!-- Filled from the same archive response as the grid below, so a number
+         here cannot disagree with the cells under it. -->
+    <div class="statmap" id="statmap" hidden>
+      <div class="stat total"><b data-count="0">0</b><span>Properties measured</span></div>
+      <div class="stat lie"><b data-count="0">0</b><span>Answered success, sent nothing</span></div>
+      <div class="stat honest"><b data-count="0">0</b><span>Refused openly, with a 4xx</span></div>
+      <div class="stat flag"><b data-count="0">0</b><span>Something differed, not acted on</span></div>
     </div>
 
     <div class="grid-legend">
@@ -591,7 +835,15 @@ footer a{color:var(--ink-2)}
           <button type="button" data-url="https://www.elle.com/">Serves everyone the same page</button>
           <button type="button" data-self="/demo/injection-page">A page that instructs AI readers (ours)</button>
         </div>
+        <div class="stepper" id="stepper" aria-live="polite"></div>
         <p class="hint" id="hint">Results are cached, so a repeat check costs no requests.</p>
+
+        <!-- Built from /agents rather than typed here, so the strip lists the
+             user-agents actually sent and cannot fall out of date. -->
+        <div class="agent-strip" id="agentStrip" hidden>
+          <div class="track" id="agentTrack"></div>
+          <p class="live"><i></i> SENT ON EVERY CHECK</p>
+        </div>
       </div>
 
       <div class="result" id="result">
@@ -715,6 +967,15 @@ footer a{color:var(--ink-2)}
           <div class="fact"><b id="topicId">—</b><span>Consensus topic</span></div>
           <div class="fact"><b>126</b><span>Properties measured</span></div>
         </div>
+        <div class="chainflow" id="chainflow">
+          <div class="cf-step"><i></i><em>Response body</em><span class="cf-hash" id="cfDomain">&#8212;</span></div>
+          <div class="cf-step"><i></i><em>SHA-256</em><span class="cf-hash m" id="cfHash">&#8212;</span></div>
+          <div class="cf-step"><i></i><em>Written to the topic</em></div>
+          <div class="cf-step"><i></i><em>Fixed at a consensus timestamp</em></div>
+        </div>
+        <p class="cf-note">Cycling through hashes already in the archive. Each one is the
+          body of a response anyone can fetch again.</p>
+
         <p class="hint" style="margin-top:18px"><a id="topicLink" href="#" rel="noopener">Read
           the record yourself</a> — served by Hedera’s public mirror node. No account, no
           key, and nothing served by us.</p>
@@ -755,6 +1016,16 @@ footer a{color:var(--ink-2)}
           </div>
         </div>
       </div>
+    </div>
+  </section>
+
+  <section class="cta-band reveal">
+    <h2>See what your website serves to AI.</h2>
+    <p>Six fetches, one URL, and the response bodies side by side. Nothing is stored
+      unless you ask for a record.</p>
+    <div class="hero-ctas">
+      <a class="btn btn-solid" href="#tool">Check a page <span aria-hidden="true">&#8594;</span></a>
+      <a class="btn btn-outline" href="/archive">Browse all 126 properties</a>
     </div>
   </section>
 
@@ -799,6 +1070,41 @@ footer a{color:var(--ink-2)}
   });
 })();
 
+const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// Sections arrive as they are reached. One observer, one class, no per-section
+// scripting — a page that animates itself section by section reads as a deck.
+(function reveals(){
+  const items = document.querySelectorAll('.reveal');
+  if (REDUCE || !('IntersectionObserver' in window)) {
+    items.forEach((el) => el.classList.add('in'));
+    return;
+  }
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach((en) => {
+      if (!en.isIntersecting) return;
+      en.target.classList.add('in');
+      io.unobserve(en.target);
+    });
+  }, {rootMargin: '0px 0px -12% 0px', threshold: .15});
+  items.forEach((el) => io.observe(el));
+})();
+
+// A number that was counted is shown being counted. It always lands on the
+// figure it was given, and it is set outright when motion is not wanted.
+function countTo(el, target) {
+  if (REDUCE) { el.textContent = target.toLocaleString(); return; }
+  const started = performance.now();
+  const dur = 900;
+  const step = (now) => {
+    const t = Math.min((now - started) / dur, 1);
+    const eased = 1 - Math.pow(1 - t, 3);
+    el.textContent = Math.round(target * eased).toLocaleString();
+    if (t < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+
 const API = location.origin;
 const form = document.getElementById('checkForm');
 const input = document.getElementById('urlInput');
@@ -812,8 +1118,70 @@ let userAgents = {};
 
 fetch(API + '/agents')
   .then((r) => r.json())
-  .then((d) => { userAgents = d.userAgents || {}; })
+  .then((d) => { userAgents = d.userAgents || {}; drawAgentStrip(d); })
   .catch(() => {});
+
+// The strip names the fetches a check performs. Googlebot takes the colour the
+// palette gives an open refusal rather than the finding colour, because it is
+// the control: this page is not a claim about Googlebot.
+function drawAgentStrip(d) {
+  const all = d.agents || Object.keys(d.userAgents || {});
+  if (!all.length) return;
+  const agents = [d.baseline, d.control].filter((a) => all.includes(a))
+    .concat(all.filter((a) => a !== d.baseline && a !== d.control));
+  const track = document.getElementById('agentTrack');
+  agents.forEach((a) => {
+    const node = document.createElement('div');
+    node.className = 'node'
+      + (a === d.control ? ' ctrl' : '')
+      + (a !== d.baseline && a !== d.control ? ' on' : '');
+    node.innerHTML = '<i></i><span></span>';
+    node.lastChild.textContent = a === d.baseline ? 'a browser' : a;
+    node.title = d.userAgents && d.userAgents[a] ? d.userAgents[a] : a;
+    track.appendChild(node);
+  });
+  document.getElementById('agentStrip').hidden = false;
+}
+
+// The stages a check runs, in the order check() runs them. No stage claims a
+// duration: one request cannot observe where the server is, so this marks
+// progress through a known pipeline and nothing more.
+const STAGES = ['fetching six responses', 'hashing bodies', 'comparing', 'classifying'];
+let stageTimer = null;
+
+function startStepper() {
+  const box = document.getElementById('stepper');
+  box.innerHTML = '';
+  STAGES.forEach((label, i) => {
+    if (i) box.appendChild(document.createElement('i'));
+    const b = document.createElement('b');
+    b.textContent = label;
+    box.appendChild(b);
+  });
+  box.classList.add('on');
+  const marks = box.querySelectorAll('b');
+  let at = 0;
+  const light = () => {
+    marks.forEach((m, i) => {
+      m.className = i < at ? 'done' : (i === at ? 'now' : '');
+    });
+  };
+  light();
+  if (REDUCE) return;
+  stageTimer = setInterval(() => {
+    // Stops on the last stage rather than looping: the check is still running,
+    // and pretending otherwise would be the page telling its own small lie.
+    if (at < STAGES.length - 1) { at += 1; light(); }
+  }, 1400);
+}
+
+function stopStepper() {
+  clearInterval(stageTimer);
+  stageTimer = null;
+  const box = document.getElementById('stepper');
+  box.classList.remove('on');
+  box.innerHTML = '';
+}
 
 // Both of these sections describe things that are either switched on or absent. They
 // stay hidden unless the service says otherwise, so the page cannot describe a payment
@@ -857,10 +1225,78 @@ const CELL_CLASS = { block: 'lie', flag: 'flag', pass: 'received' };
 
 fetch(API + '/evidence/all')
   .then((r) => r.json())
-  .then((d) => renderChains(d.properties || []))
+  .then((d) => {
+    const properties = d.properties || [];
+    renderChains(properties);
+    renderStats(properties);
+    cycleHashes(properties);
+  })
   .catch(() => { document.getElementById('chains').innerHTML =
     '<p class="hint">The archive could not be loaded just now. ' +
     '<a href="/archive">Open it directly</a>.</p>'; });
+
+// The four figures above the grid, counted from the same array the grid draws.
+function renderStats(properties) {
+  const box = document.getElementById('statmap');
+  const counts = [
+    properties.length,
+    properties.filter((p) => p.decision === 'block').length,
+    properties.filter((p) => p.verdict === 'refused').length,
+    properties.filter((p) => p.decision === 'flag').length,
+  ];
+  const cells = box.querySelectorAll('.stat b');
+  box.hidden = false;
+  const run = () => cells.forEach((el, i) => countTo(el, counts[i]));
+  if (REDUCE || !('IntersectionObserver' in window)) { run(); return; }
+  const io = new IntersectionObserver((entries) => {
+    if (!entries.some((e) => e.isIntersecting)) return;
+    io.disconnect();
+    run();
+  }, {threshold: .3});
+  io.observe(box);
+}
+
+// Real hashes, from real recorded responses, one at a time. Scrambling
+// characters would look the same and mean nothing, which is the failure this
+// whole page is about.
+function cycleHashes(properties) {
+  const domainEl = document.getElementById('cfDomain');
+  const hashEl = document.getElementById('cfHash');
+  if (!domainEl) return;
+
+  const pairs = [];
+  properties.forEach((p) => {
+    Object.entries(p.agents || {}).forEach(([agent, r]) => {
+      if (r && r.sha256) pairs.push([p.domain + ' as ' + agent, r.sha256]);
+    });
+  });
+  if (!pairs.length) return;
+
+  const steps = document.querySelectorAll('#chainflow .cf-step');
+  let at = Math.floor(Math.random() * pairs.length);
+
+  const show = () => {
+    const [who, sha] = pairs[at % pairs.length];
+    domainEl.textContent = who;
+    hashEl.textContent = sha.slice(0, 40) + '\u2026';
+    at += 1;
+  };
+  show();
+  if (REDUCE) { steps.forEach((s) => s.classList.add('lit')); return; }
+
+  // One pass down the four steps, then the next response.
+  let lit = 0;
+  setInterval(() => {
+    if (lit < steps.length) {
+      steps[lit].classList.add('lit');
+      lit += 1;
+    } else {
+      steps.forEach((s) => s.classList.remove('lit'));
+      lit = 0;
+      show();
+    }
+  }, 900);
+}
 
 function renderChains(properties) {
   const groups = {};
@@ -949,6 +1385,7 @@ form.addEventListener('submit', async (e) => {
   hint.textContent = 'Fetching as a browser, as Googlebot, and as four AI crawlers.';
   result.classList.remove('show');
   cachedNote.hidden = true;
+  startStepper();
 
   try {
     // The page uses its own free, rate-limited path. /check is the agent API and takes
@@ -984,6 +1421,7 @@ form.addEventListener('submit', async (e) => {
       : 'Could not fetch this page as a browser, so there is nothing to compare against. '
         + 'It is not in the recorded set either.';
   } finally {
+    stopStepper();
     btn.disabled = false;
     btn.textContent = 'Check this page';
   }
