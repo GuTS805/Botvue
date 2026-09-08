@@ -538,8 +538,8 @@ footer a{color:var(--ink-2)}
     <div class="prose">
       <p class="section-eyebrow">Try it yourself</p>
       <h2>Check a page yourself.</h2>
-      <p>Fetches the URL as a browser, as Googlebot, and as each AI crawler, then compares
-        what came back. Six fetches, so give it a few seconds.</p>
+      <p id="toolLede">Fetches the URL as a browser, as Googlebot, and as each AI crawler,
+        then compares what came back. Six fetches, so give it a few seconds.</p>
     </div>
 
     <div class="tool">
@@ -692,7 +692,7 @@ const hint = document.getElementById('hint');
 const result = document.getElementById('result');
 const cachedNote = document.getElementById('cached');
 
-const DEFAULT_HINT = 'Results are cached, so a repeat check costs no requests.';
+let DEFAULT_HINT = 'Results are cached, so a repeat check costs no requests.';
 let userAgents = {};
 
 fetch(API + '/agents')
@@ -701,9 +701,21 @@ fetch(API + '/agents')
   .catch(() => {});
 
 // The record section only appears once findings are actually anchored somewhere.
+// The tool's own description is read from the service rather than hardcoded: this
+// deployment gates /check behind x402, so promising a live fetch to someone who has
+// not signed a payment would be the exact thing this page reports other sites for.
 fetch(API + '/health')
   .then((r) => r.json())
   .then((d) => {
+    if (d.paymentRequired) {
+      DEFAULT_HINT = 'Live checking is the paid agent endpoint on this deployment, so '
+        + 'the page answers from what was recorded on 6 September.';
+      hint.textContent = DEFAULT_HINT;
+      document.getElementById('toolLede').textContent =
+        'A live check fetches the URL as a browser, as Googlebot, and as each AI '
+        + 'crawler, then compares what came back. Here that runs behind the paid '
+        + 'agent endpoint, so the examples below answer from the recorded scan.';
+    }
     if (!d.topicId) return;
     document.getElementById('topicId').textContent = d.topicId;
     document.getElementById('topicLink').href = d.topicUrl;
@@ -821,11 +833,15 @@ form.addEventListener('submit', async (e) => {
       body: JSON.stringify({url})
     });
 
+    // A live check is the paid agent endpoint. A person reading this page has not
+    // signed a payment and should not have to: fall back to what was recorded, and
+    // say which one they are looking at rather than showing them nothing.
     if (res.status === 402) {
-      const terms = await res.json();
-      const accepts = (terms.accepts || [])[0] || {};
-      hint.textContent = 'This service is running in paid mode: ' + accepts.amount
-        + ' tinybar to ' + accepts.payTo + '.';
+      const recovered = await showCached(url, 'paid');
+      hint.textContent = recovered
+        ? 'Live checking is the paid agent endpoint. This is the recorded observation.'
+        : 'Live checking is the paid agent endpoint, and this domain is not in the '
+          + 'recorded set. Try one of the examples above, or browse the archive.';
       return;
     }
     // A bad address is the caller's to fix; no recording will help, so say what is wrong.
@@ -841,7 +857,7 @@ form.addEventListener('submit', async (e) => {
   } catch (err) {
     // A live fetch can be rate-limited, and a publisher can change its configuration at
     // any time. Fall back to what was recorded, and say plainly that it is a recording.
-    const recovered = await showCached(url);
+    const recovered = await showCached(url, 'failed');
     hint.textContent = recovered
       ? DEFAULT_HINT
       : 'Could not fetch this page as a browser, so there is nothing to compare against. '
@@ -852,7 +868,10 @@ form.addEventListener('submit', async (e) => {
   }
 });
 
-async function showCached(url) {
+// `why` distinguishes a live fetch that failed from one that was never attempted,
+// because telling a reader their check failed when it was simply gated would be a
+// small version of the misreporting this page exists to find.
+async function showCached(url, why) {
   let domain;
   try { domain = new URL(url).hostname; } catch { return false; }
 
@@ -863,9 +882,11 @@ async function showCached(url) {
 
     const when = new Date(d.capturedAt).toLocaleDateString('en-GB',
       {day:'numeric', month:'long', year:'numeric'});
-    cachedNote.textContent = 'Live fetch was not possible just now. This is what was '
-      + 'recorded on ' + when + '. If the site has changed since, the hashes below will '
-      + 'no longer match.';
+    const lead = why === 'paid'
+      ? 'A live check runs behind the paid agent endpoint, so it was not attempted.'
+      : 'Live fetch was not possible just now.';
+    cachedNote.textContent = lead + ' This is what was recorded on ' + when
+      + '. If the site has changed since, the hashes below will no longer match.';
     cachedNote.hidden = false;
 
     render({
