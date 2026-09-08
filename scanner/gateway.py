@@ -10,17 +10,18 @@ second adapter — an MCP server, say — reuses the same code rather than reimp
 
 from __future__ import annotations
 
-from fastapi import FastAPI, Header, Response
+from fastapi import FastAPI, Header, Request, Response
 from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 from pydantic import BaseModel, Field
 
 import json
 import os
+import time
 from pathlib import Path
 from urllib.parse import urlparse
 
 from .agents import AGENTS, BASELINE, CONTROL
-from .attest import QueueAttestor
+from .attest import NullAttestor, QueueAttestor
 from .demo_page import render as render_demo_page
 from .payments import OpenVerifier, build_payment_layer
 from .service import DECISION, EXPLANATION, CheckResult, check
@@ -47,6 +48,42 @@ WEB = Path(__file__).resolve().parents[1] / "apps" / "web"
 
 attestor = QueueAttestor()
 verifier, terms = build_payment_layer()
+
+# The paid endpoint is the agent API. A person reading the page is not the agent, and
+# asking them to sign a Hedera transfer to see what the tool does would leave the site
+# describing a check nobody visiting it can run. So the page gets its own free path,
+# bounded per caller because each check costs six outbound fetches.
+PREVIEW_LIMIT = 15
+PREVIEW_WINDOW = 3600
+_preview_hits: dict[str, list[float]] = {}
+
+
+def _caller(request: Request) -> str:
+    forwarded = request.headers.get("x-forwarded-for", "")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+def _preview_allowed(caller: str) -> tuple[bool, int]:
+    """Returns whether this caller may run another preview, and how many remain."""
+    now = time.monotonic()
+    hits = [t for t in _preview_hits.get(caller, []) if now - t < PREVIEW_WINDOW]
+
+    if len(hits) >= PREVIEW_LIMIT:
+        _preview_hits[caller] = hits
+        return False, 0
+
+    hits.append(now)
+    _preview_hits[caller] = hits
+
+    # Callers that have aged out entirely are dropped rather than kept forever, so a
+    # long-running instance does not accumulate an entry per visitor it ever saw.
+    if len(_preview_hits) > 2048:
+        for key in [k for k, v in _preview_hits.items() if not v or now - v[-1] > PREVIEW_WINDOW]:
+            _preview_hits.pop(key, None)
+
+    return True, PREVIEW_LIMIT - len(hits)
 
 
 class CheckRequest(BaseModel):
@@ -253,13 +290,24 @@ def check_url(
             content={**terms.challenge(), "error": settlement.reason},
         )
 
+    result = _scan(req, attestor)
+    if isinstance(result, JSONResponse):
+        return result
+
+    response.headers["X-PAYMENT-RESPONSE"] = str(settlement.ok).lower()
+    return _to_response(result, settlement.receipt())
+
+
+def _scan(req: CheckRequest, using) -> CheckResult | JSONResponse:
+    """The scan itself, or the reason it could not be run. Shared so the paid endpoint
+    and the page's own preview cannot drift apart in what they measure."""
     target, problem = normalise_url(req.url)
     if problem:
         # A tool that reports on misleading status codes does not get to answer 200 to a
         # request it could not carry out.
         return JSONResponse(status_code=400, content={"error": problem, "url": req.url})
 
-    result = check(target, fresh=req.fresh, attestor=attestor)
+    result = check(target, fresh=req.fresh, attestor=using)
 
     if result.verdict in ("baseline-failed", "no-data"):
         return JSONResponse(
@@ -271,6 +319,33 @@ def check_url(
                 "statuses": result.statuses,
             },
         )
+    return result
 
-    response.headers["X-PAYMENT-RESPONSE"] = str(settlement.ok).lower()
-    return _to_response(result, settlement.receipt())
+
+@app.post(
+    "/check/preview",
+    response_model=CheckResponse,
+    include_in_schema=False,
+    summary="The same check, unpaid and rate-limited, for the page's own tool.",
+)
+def check_preview(req: CheckRequest, request: Request) -> CheckResponse | JSONResponse:
+    # Deliberately absent from the OpenAPI document. That document is what a Bazantic
+    # gateway wraps and prices, and a free twin of the paid operation listed beside it
+    # would make the gate decorative.
+    allowed, remaining = _preview_allowed(_caller(request))
+    if not allowed:
+        return JSONResponse(
+            status_code=429,
+            content={
+                "error": f"This page runs {PREVIEW_LIMIT} free checks an hour per visitor. "
+                         "The archive is not rate-limited, and /check takes payment.",
+            },
+        )
+
+    # Anonymous previews are not queued for the consensus record. That record carries
+    # findings this project stands behind, not every URL a visitor happened to type.
+    result = _scan(req, NullAttestor())
+    if isinstance(result, JSONResponse):
+        return result
+
+    return _to_response(result, {"mode": "preview", "remaining": remaining})

@@ -218,6 +218,15 @@ time against Hedera's public mirror node, and a disagreement is recorded, not hi
 And it answers `402` when it means "pay me" — which is the thing 56 of those news responses
 do not do.
 
+`/check` is the agent API and takes payment. The page at
+[botvue.onrender.com](https://botvue.onrender.com) runs the same scan through a free path
+capped at 15 checks an hour per visitor, because a reader who has not signed a Hedera
+transfer should still be able to see what the tool does. That path is deliberately absent
+from `/openapi.json` — that document is what a Bazantic gateway wraps and prices, and a
+free twin of the paid operation listed beside it would make the gate decorative. Anonymous
+checks are not written to the consensus topic either; that record carries findings this
+project stands behind, not every URL a visitor happened to type.
+
 | | |
 |---|---|
 | Consensus topic | `0.0.10395053` |
