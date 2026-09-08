@@ -252,6 +252,37 @@ payment rail on top of it rather than being handed a pre-built gate.
 
 ---
 
+## A second adapter
+
+`gateway.py`'s own docstring makes a claim: "a second adapter — an MCP server, say — reuses
+the same code rather than reimplementing it." [`scanner/mcp_server.py`](scanner/mcp_server.py)
+is that claim, made true rather than left as a comment. It wraps the exact same
+`scanner.service.check` the HTTP gateway calls — same fetch, same diff, same classifier, same
+verdict — behind two MCP tools instead of a REST route:
+
+```bash
+python -m scanner.mcp_server
+```
+
+```
+check_url(url, fresh=false)  — the check itself: decision, verdict, explanation, per-crawler
+                                word ratios, a SHA-256 of every response body, and — when the
+                                verdict rests on specific text — the sentences themselves,
+                                quoted, not described.
+list_agents()                 — the exact user-agent strings sent, so a result can be
+                                reproduced with a plain curl rather than taken on trust.
+```
+
+Point any MCP client at it over stdio — Claude Desktop, `mcp dev`, an agent framework's own
+tool loader. Free and unattested: an MCP call carries no x402 payment leg the way `/check`
+does, and writing every anonymous query to the consensus topic would turn a demonstration
+tool into unbounded, uncontrolled evidence — the same reasoning behind the web page's own
+free `/check/preview` path, which this mirrors. This is a separate process from the HTTP
+gateway (`mcp` is not a dependency of `gateway.py`, and is not installed in the deployed
+service), so it does not add a stdio server to a web dyno that has no business running one.
+
+---
+
 ## Limitations
 
 **Detecting *added* content is unreliable, and it does not drive decisions.** Measured
