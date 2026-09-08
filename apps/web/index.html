@@ -197,6 +197,11 @@ header{padding:22px 0 0}
 .exhibit-body q{display:block;quotes:none;font-family:"JetBrains Mono",monospace;
   font-size:clamp(1rem,1.55vw,1.32rem);line-height:1.52;letter-spacing:-.012em;max-width:40ch}
 .exhibit-body q.small{font-size:.95rem;line-height:1.6;max-width:46ch}
+/* Answering 402 honestly is the opposite of the finding, so it takes the calm
+   colour the palette gives an open refusal, not the alarm one. */
+.code-chip.honest-chip{background:var(--honest)}
+.terms{margin:0;font-size:.82rem;line-height:1.55;color:var(--ink-2);
+  white-space:pre;overflow-x:auto;-webkit-overflow-scrolling:touch}
 .exhibit-foot{display:flex;flex-wrap:wrap;gap:8px 26px;padding:16px 24px;
   border-top:1px solid var(--rule-2);font-size:.86rem;color:var(--ink-2)}
 .exhibit-foot b{font-weight:600;color:var(--ink)}
@@ -641,6 +646,44 @@ footer a{color:var(--ink-2)}
     </div>
   </section>
 
+  <section id="paying" hidden>
+    <div class="split">
+      <div class="prose">
+        <p class="section-eyebrow">Paying for a check</p>
+        <h2>It answers 402 when it means pay me.</h2>
+        <p>An agent that wants a check reads the price from the endpoint itself. Nothing is
+          hardcoded — not the amount, not the payee, not the facilitator's account — because
+          a stale copy of any of those is a payment sent somewhere it should not go, which
+          is the failure class this project spends the rest of its time measuring in other
+          people's services.</p>
+        <p>The caller signs a Hedera transfer as the paying account and hands over the
+          frozen, unsubmitted bytes. <strong>Blocky402</strong> names itself fee payer, adds
+          its own signature and broadcasts. This server never holds a private key.</p>
+        <p>And a caller does not have to take the facilitator's word that it settled: the
+          settle response is checked a second time against Hedera's public mirror node, and
+          a disagreement is recorded rather than hidden.</p>
+      </div>
+
+      <div>
+        <div class="exhibit">
+          <div class="exhibit-bar">
+            <span class="code-chip honest-chip">402 Payment Required</span>
+            <span class="req">POST /check &nbsp;·&nbsp; no payment presented</span>
+          </div>
+          <div class="exhibit-body">
+            <pre class="terms m" id="termsBody">loading…</pre>
+          </div>
+          <div class="exhibit-foot">
+            <span>Served live from <span class="m">/terms</span></span>
+          </div>
+        </div>
+        <p class="hint" style="margin-top:18px">The same document an agent reads. Fetch it
+          yourself at <a href="/terms">/terms</a>, or read the whole flow in
+          <a href="https://github.com/GuTS805/Botvue#the-gateway">the source</a>.</p>
+      </div>
+    </div>
+  </section>
+
   <section id="record" hidden>
     <div class="split">
       <div class="prose">
@@ -758,16 +801,31 @@ fetch(API + '/agents')
   .then((d) => { userAgents = d.userAgents || {}; })
   .catch(() => {});
 
-// The record section only appears once findings are actually anchored somewhere.
+// Both of these sections describe things that are either switched on or absent. They
+// stay hidden unless the service says otherwise, so the page cannot describe a payment
+// gate that is not gating anything or a record that was never written.
 fetch(API + '/health')
   .then((r) => r.json())
   .then((d) => {
+    if (d.paymentRequired) showTerms();
     if (!d.topicId) return;
     document.getElementById('topicId').textContent = d.topicId;
     document.getElementById('topicLink').href = d.topicUrl;
     document.getElementById('record').hidden = false;
   })
   .catch(() => {});
+
+// The terms are printed as the service returns them rather than transcribed into the
+// page, so the price and the payee here cannot drift from the ones an agent is quoted.
+function showTerms() {
+  fetch(API + '/terms')
+    .then((r) => r.json())
+    .then((t) => {
+      document.getElementById('termsBody').textContent = JSON.stringify(t, null, 2);
+      document.getElementById('paying').hidden = false;
+    })
+    .catch(() => {});
+}
 
 // ── The unit grid ───────────────────────────────────────────────────────────
 // One cell per property actually measured, so the picture cannot drift from the
