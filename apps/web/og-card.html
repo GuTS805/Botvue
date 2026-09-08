@@ -17,55 +17,69 @@
 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 :root{
-  --ground:#eef0ed;
-  --ground-2:#e3e7e3;
-  --surface:#fafbfa;
-  --ink:#0d1412;
-  --ink-2:#525d58;
-  --rule:#cfd7d1;
-  --rule-2:#dee4df;
-  --received:#16644f;
-  --lie:#bd1f3c;
+  --ground:#06080e;
+  --ground-2:rgba(0,0,0,.3);
+  --surface:#0e1420;
+  --ink:#e9eef8;
+  --ink-2:#9aa7bf;
+  --ink-3:#66738c;
+  --rule:rgba(150,175,225,.13);
+  --rule-2:rgba(150,175,225,.07);
+  --received:#3ddc97;
+  --lie:#ff4d6a;
+  --accent:#6cc6ff;
+  --violet:#8b7bf0;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{width:1200px;height:630px;overflow:hidden}
 body{
-  font-family:"Instrument Sans",system-ui,sans-serif;
+  font-family:Inter,system-ui,sans-serif;
   color:var(--ink);
   background:
-    radial-gradient(900px 520px at 88% -12%, rgba(22,100,79,.16), transparent 62%),
-    radial-gradient(700px 420px at -4% 8%, rgba(63,92,138,.09), transparent 60%),
+    radial-gradient(900px 560px at 86% -14%, rgba(90,162,255,.26), transparent 64%),
+    radial-gradient(720px 460px at -6% 10%, rgba(139,123,240,.20), transparent 62%),
     var(--ground);
 }
+/* The same fine grid the site stands on, so a shared card and the page it
+   links to read as one product. */
+body::before{content:'';position:absolute;inset:0;
+  background-image:
+    linear-gradient(to right, rgba(150,175,225,.055) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(150,175,225,.055) 1px, transparent 1px);
+  background-size:52px 52px;
+  -webkit-mask-image:radial-gradient(120% 80% at 50% 0%, #000 6%, transparent 70%);
+  mask-image:radial-gradient(120% 80% at 50% 0%, #000 6%, transparent 70%)}
 
 /* Everything lives inside this box. Platforms crop toward the centre, and the
    crimson status chip is the one element that must survive every crop. */
-.safe{position:absolute;inset:54px 64px;display:flex;flex-direction:column}
+.safe{position:absolute;inset:54px 64px;display:flex;flex-direction:column;z-index:1}
 
 .brand{display:flex;align-items:center;gap:13px}
-.brand b{font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:31px;letter-spacing:-.04em}
-.brand span{font-size:20px;color:var(--ink-2)}
+.brand b{font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:31px;letter-spacing:-.04em;color:#fff}
+.brand span{font-size:20px;color:var(--ink-3)}
 
-h1{font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:52px;line-height:1.05;
-  letter-spacing:-.042em;margin-top:26px;max-width:22ch}
-h1 .accent{color:var(--received)}
+h1{font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:54px;line-height:1.04;
+  letter-spacing:-.05em;margin-top:26px;max-width:22ch;color:#fff}
+h1 .accent{background:linear-gradient(176deg, var(--accent), var(--violet));
+  -webkit-background-clip:text;background-clip:text;color:transparent}
 
-.exhibit{margin-top:auto;border:1px solid var(--rule);background:var(--surface);
-  border-radius:16px;overflow:hidden;
-  box-shadow:0 2px 4px rgba(13,20,18,.04), 0 24px 60px -30px rgba(13,20,18,.3)}
+.exhibit{margin-top:auto;border:1px solid var(--rule);border-radius:18px;overflow:hidden;
+  background:linear-gradient(180deg, #121a29, #0e1420);
+  box-shadow:0 1px 0 rgba(255,255,255,.04) inset, 0 40px 90px -40px rgba(0,0,0,1)}
 .bar{display:flex;align-items:center;gap:16px;padding:14px 26px;
   border-bottom:1px solid var(--rule);background:var(--ground-2)}
 .chip{font-family:"JetBrains Mono",monospace;font-size:19px;font-weight:700;
-  letter-spacing:.02em;padding:5px 13px;color:#fff;background:var(--lie);border-radius:6px}
-.req{font-family:"JetBrains Mono",monospace;font-size:18px;color:var(--ink-2)}
+  letter-spacing:.03em;padding:5px 13px;border-radius:7px;color:var(--lie);
+  background:rgba(255,77,106,.12);box-shadow:inset 0 0 0 1px rgba(255,77,106,.34)}
+.req{font-family:"JetBrains Mono",monospace;font-size:18px;color:var(--ink-3)}
 .body{padding:30px 26px 28px}
 .body q{display:block;quotes:none;font-family:"JetBrains Mono",monospace;
-  font-size:29px;line-height:1.46;letter-spacing:-.012em}
+  font-size:29px;line-height:1.46;letter-spacing:-.015em;color:#fff}
 .foot{display:flex;gap:34px;padding:16px 26px;border-top:1px solid var(--rule-2);
-  font-size:19px;color:var(--ink-2)}
+  font-size:19px;color:var(--ink-3);background:rgba(0,0,0,.24)}
 .foot b{font-weight:600;color:var(--ink)}
 .foot .m{font-family:"JetBrains Mono",monospace;font-size:18px}
 </style>
@@ -74,9 +88,10 @@ h1 .accent{color:var(--received)}
 <div class="safe">
   <div class="brand">
     <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true">
-      <rect width="32" height="32" fill="#0d1412"/>
-      <rect x="6" y="9" width="9" height="14" fill="#16644f"/>
-      <rect x="18" y="9" width="9" height="14" fill="none" stroke="#bd1f3c" stroke-width="1.5"/>
+      <rect width="32" height="32" rx="7" fill="#0e1420"/>
+      <rect width="32" height="32" rx="7" fill="none" stroke="rgba(150,175,225,.25)"/>
+      <rect x="6" y="9" width="9" height="14" rx="2" fill="#3ddc97"/>
+      <rect x="18" y="9" width="9" height="14" rx="2" fill="none" stroke="#ff4d6a" stroke-width="1.6"/>
     </svg>
     <b>Botvue</b><span>see what the bots see</span>
   </div>
