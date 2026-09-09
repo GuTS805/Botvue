@@ -111,12 +111,23 @@ header.stuck{padding:10px 0;background:rgba(6,8,14,.72);
 .brand b{font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:1.2rem;
   letter-spacing:-.03em;color:#fff}
 .brand .tag-line{font-size:.82rem;color:var(--ink-3)}
-.nav{margin-left:auto;display:flex;gap:2px;font-size:.885rem}
+.nav{display:flex;gap:2px;font-size:.885rem;flex-wrap:wrap}
 .nav a{color:var(--ink-2);text-decoration:none;padding:7px 14px;border-radius:99px;
   white-space:nowrap;transition:color .2s var(--ease), background .2s var(--ease)}
 .nav a:hover{color:#fff;background:rgba(150,175,225,.07)}
 .nav a[aria-current]{color:#fff;background:rgba(150,175,225,.10);
   box-shadow:inset 0 0 0 1px var(--rule)}
+.header-right{margin-left:auto}
+.header-cta{position:relative;display:inline-flex;align-items:center;gap:8px;font:inherit;
+  font-weight:600;font-size:.87rem;padding:10px 19px;border-radius:10px;
+  border:1px solid rgba(108,198,255,.32);color:#fff;text-decoration:none;white-space:nowrap;
+  background:linear-gradient(180deg, rgba(108,198,255,.20), rgba(108,198,255,.07));
+  transition:border-color .25s var(--ease), box-shadow .25s var(--ease),
+             transform .25s var(--ease)}
+.header-cta:hover{color:#fff;border-color:rgba(108,198,255,.6);
+  box-shadow:0 0 0 1px rgba(108,198,255,.20), 0 0 40px -12px rgba(108,198,255,.30);
+  transform:translateY(-1px)}
+@media (max-width:640px){.header-cta{display:none}}
 
 .hero{padding:66px 0 8px}
 .hero h1{max-width:20ch}
@@ -278,9 +289,12 @@ tr.detail-row:hover{background:none}
     <nav class="nav">
       <a href="/">Home</a>
       <a href="/archive" aria-current="page">Archive</a>
+      <a href="/#tool">How it works</a>
       <a href="/#record">Evidence</a>
-      <a href="https://github.com/GuTS805/Botvue">GitHub</a>
     </nav>
+    <div class="header-right">
+      <a class="header-cta" href="/#tool">Check a page <span aria-hidden="true">→</span></a>
+    </div>
   </div>
 </header>
 
