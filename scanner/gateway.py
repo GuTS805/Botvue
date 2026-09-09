@@ -221,6 +221,24 @@ def evidence_all() -> dict:
     }
 
 
+@app.get(
+    "/evidence/changelog",
+    summary="Decisions that changed on a re-scan, not just what is true today.",
+    description="The corpus is re-fetched on a schedule (see scanner/rescan.py), because "
+                "these responses carry cache-control: no-store and a configuration can "
+                "change between one run and the next. This lists domains whose decision — "
+                "pass, flag, or block — moved since the previous run. Same-decision changes "
+                "(a different verdict label with no different consequence for a caller) are "
+                "not included; they are not something a reader needs to act on.",
+)
+def evidence_changelog(limit: int = 50) -> dict:
+    changelog_path = Path(__file__).resolve().parents[1] / "evidence" / "changelog.json"
+    if not changelog_path.exists():
+        return {"entries": []}
+    entries = json.loads(changelog_path.read_text(encoding="utf-8"))
+    return {"entries": entries[: max(0, min(limit, len(entries)))]}
+
+
 @app.get("/archive", include_in_schema=False)
 def archive_page() -> FileResponse:
     return FileResponse(WEB / "archive.html")

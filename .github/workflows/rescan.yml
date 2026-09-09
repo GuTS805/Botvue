@@ -1,0 +1,52 @@
+name: Re-scan the corpus
+
+# The evidence archive is a standing observation, not a photograph from one afternoon.
+# These responses carry cache-control: no-store, so a publisher's CDN rule can change
+# between one run of this and the next -- this re-observes daily and records what moved,
+# rather than freezing a manifest once and calling it current forever.
+#
+# Scheduled early, off the hours judges or a demo recording are most likely to hit the
+# site: a run that changes evidence/*.json pushes to main, and Render redeploys on push,
+# which means a short cold start right after. Trigger it by hand (workflow_dispatch) only
+# when that redeploy is not about to land in the middle of something.
+
+on:
+  schedule:
+    - cron: "0 3 * * *"   # 03:00 UTC — 08:30 IST
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  rescan:
+    runs-on: ubuntu-latest
+    # Measured locally: ~8 min to re-fetch 567 domains x 6 agents live, ~7.5 min to grade
+    # them (parallelised across processes in archive.collect() -- CPU-bound work under one
+    # GIL gained nothing from threads). 40 minutes leaves real margin over that ~16 minute
+    # total, for a slower CI runner or a slow morning on the sites being fetched.
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Re-fetch every property and diff against the last run
+        run: python -m scanner.rescan
+
+      - name: Commit the updated evidence, if anything changed
+        run: |
+          git config user.name "botvue-rescan"
+          git config user.email "actions@github.com"
+          git add evidence/
+          if git diff --cached --quiet; then
+            echo "no changes to commit"
+          else
+            git commit -m "Re-scan: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            git push
+          fi

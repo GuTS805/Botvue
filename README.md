@@ -182,6 +182,22 @@ The topic has **no submit key** — anyone can append to it, including a publish
 disputes a finding. A record only this project could write to would prove only that this
 project wrote something down.
 
+### Re-observed, not just re-verifiable
+
+`verify` above answers "is the recorded hash still what this site serves." A different
+question is whether the *decision* changed at all — did a soft-blocked property start
+answering honestly, or start soft-blocking crawlers it used to let through cleanly.
+[`scanner/rescan.py`](scanner/rescan.py) answers that one: a scheduled job
+([`.github/workflows/rescan.yml`](.github/workflows/rescan.yml), daily) re-fetches every
+property in the corpus live, rebuilds the manifest, and diffs the new decision against the
+old one for every domain. A same-decision change — a different verdict label that still
+resolves to `pass` either side — is filtered out; it is not something a caller needs to
+act on. What is left is written to `evidence/changelog.json` and served at
+[`/evidence/changelog`](https://botvue.onrender.com/evidence/changelog), and the homepage
+shows it directly under the consensus-topic facts, with how long ago the archive was last
+re-observed next to it. The manifest a reader is looking at was never a photograph from one
+afternoon; it says how old it is, and what has moved since.
+
 ---
 
 ## The gateway
