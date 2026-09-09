@@ -11,8 +11,12 @@ name: Re-scan the corpus
 # when that redeploy is not about to land in the middle of something.
 
 on:
-  schedule:
-    - cron: "0 3 * * *"   # 03:00 UTC — 08:30 IST
+  # Schedule paused during the submission's final push: a run lands evidence/*.json on
+  # main and Render redeploys on push, and the demo video and any live judging both need
+  # production to sit still. Re-enable by uncommenting the schedule block below once
+  # recording and judging are done -- the automation itself is unchanged, just off.
+  # schedule:
+  #   - cron: "0 3 * * *"   # 03:00 UTC — 08:30 IST
   workflow_dispatch: {}
 
 permissions:
