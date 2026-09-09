@@ -620,6 +620,18 @@ tr.hi td{background:rgba(255,77,106,.06)}
 .fact b{display:block;font-family:"JetBrains Mono",monospace;font-size:1.28rem;
   font-weight:600;color:#fff;overflow-wrap:anywhere}
 .fact span{display:block;margin-top:6px;font-size:.79rem;color:var(--ink-3)}
+.changelog-row{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px;padding:11px 0;
+  border-bottom:1px solid var(--rule-2);font-size:.85rem}
+.changelog-row:last-child{border-bottom:0}
+.changelog-row .dom{font-family:"JetBrains Mono",monospace;color:#fff;font-size:.82rem}
+.changelog-row .move{font-family:"JetBrains Mono",monospace;font-size:.76rem;color:var(--ink-3)}
+.changelog-row .when{margin-left:auto;font-size:.76rem;color:var(--ink-3);white-space:nowrap}
+.changelog-row .kind{font-family:"JetBrains Mono",monospace;font-size:.7rem;font-weight:600;
+  padding:2px 9px;border-radius:6px;white-space:nowrap}
+.changelog-row .kind.worsened{color:var(--lie);background:rgba(255,77,106,.11);
+  box-shadow:inset 0 0 0 1px rgba(255,77,106,.36)}
+.changelog-row .kind.improved{color:var(--received);background:rgba(61,220,151,.11);
+  box-shadow:inset 0 0 0 1px rgba(61,220,151,.36)}
 .chainflow{margin-top:22px;border:1px solid var(--rule);border-radius:var(--r);
   background:linear-gradient(180deg, rgba(18,26,41,.7), rgba(14,20,32,.5));
   backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);padding:22px 22px 20px}
@@ -1115,7 +1127,9 @@ footer{padding:44px 0 60px;border-top:1px solid var(--rule-2);margin-top:0}
       <div>
         <div class="facts">
           <div class="fact"><b id="topicId">—</b><span>Consensus topic</span></div>
-          <div class="fact"><b>126</b><span>Properties measured</span></div>
+          <div class="fact"><b id="propsCount">126</b><span>Properties measured</span></div>
+          <div class="fact"><b id="lastVerified">—</b><span>Last re-observed</span></div>
+          <div class="fact"><b id="changesCount">0</b><span>Decisions changed since</span></div>
         </div>
         <div class="chainflow" id="chainflow">
           <div class="cf-step"><i></i><em>Response body</em><span class="cf-hash" id="cfDomain">&#8212;</span></div>
@@ -1129,6 +1143,14 @@ footer{padding:44px 0 60px;border-top:1px solid var(--rule-2);margin-top:0}
         <p class="hint" style="margin-top:18px"><a id="topicLink" href="#" rel="noopener">Read
           the record yourself</a> — served by Hedera’s public mirror node. No account, no
           key, and nothing served by us.</p>
+
+        <!-- These responses carry no-store, so a configuration can change between one
+             observation and the next. Hidden unless a scheduled re-scan has actually
+             recorded a decision moving -- an empty changelog is not a finding. -->
+        <div class="changelog" id="changelogBox" hidden>
+          <p class="section-eyebrow" style="margin-top:28px">Moved since the last re-scan</p>
+          <div id="changelogList"></div>
+        </div>
       </div>
     </div>
   </section>
@@ -1175,7 +1197,7 @@ footer{padding:44px 0 60px;border-top:1px solid var(--rule-2);margin-top:0}
       unless you ask for a record.</p>
     <div class="hero-ctas">
       <a class="btn btn-solid" href="#tool">Check a page <span aria-hidden="true">&#8594;</span></a>
-      <a class="btn btn-outline" href="/archive">Browse all 126 properties</a>
+      <a class="btn btn-outline" href="/archive">Browse all <span id="ctaPropsCount">126</span> properties</a>
     </div>
   </section>
 
@@ -1201,10 +1223,11 @@ footer{padding:44px 0 60px;border-top:1px solid var(--rule-2);margin-top:0}
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m3 6 9 7 9-7"/></svg>
     </a>
   </nav>
-  <p class="footer-note">Observations from 6 September 2026. Every claim on this page is a
-    hash of a response body anyone can fetch again. <a href="/archive">Browse all 126
-    properties</a>. Corrections welcome — if a record here is wrong, open an issue and it
-    will be annotated rather than removed.</p>
+  <p class="footer-note" id="footerNote">Re-observed daily; archive last updated <span id="footerVerified">—</span>.
+    Every claim on this page is a hash of a response body anyone can fetch again.
+    <a href="/archive">Browse all <span id="footerPropsCount">126</span> properties</a>.
+    Corrections welcome — if a record here is wrong, open an issue and it will be annotated
+    rather than removed.</p>
 </footer>
 
 <script>
@@ -1426,6 +1449,17 @@ const CHAIN_LABEL = {
 };
 const CELL_CLASS = { block: 'lie', flag: 'flag', pass: 'received' };
 
+// A relative age, not a raw timestamp -- "3h ago" is what tells a reader this is a
+// standing observation and not a page that was rendered once in September.
+function relTime(iso) {
+  if (!iso) return '—';
+  const mins = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+  if (mins < 60) return mins + 'm ago';
+  const hrs = Math.round(mins / 60);
+  if (hrs < 48) return hrs + 'h ago';
+  return Math.round(hrs / 24) + 'd ago';
+}
+
 fetch(API + '/evidence/all')
   .then((r) => r.json())
   .then((d) => {
@@ -1433,10 +1467,52 @@ fetch(API + '/evidence/all')
     renderChains(properties);
     renderStats(properties);
     cycleHashes(properties);
+    // Every place this count or date appears reads the same response, so a re-scan
+    // cannot leave one part of the page disagreeing with another.
+    ['propsCount', 'ctaPropsCount', 'footerPropsCount'].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = properties.length;
+    });
+    const lastVerified = document.getElementById('lastVerified');
+    if (lastVerified) lastVerified.textContent = relTime(d.capturedAt);
+    const footerVerified = document.getElementById('footerVerified');
+    if (footerVerified && d.capturedAt) {
+      footerVerified.textContent = new Date(d.capturedAt).toLocaleDateString('en-US',
+        {month: 'long', day: 'numeric', year: 'numeric'}) + ' (' + relTime(d.capturedAt) + ')';
+    }
   })
   .catch(() => { document.getElementById('chains').innerHTML =
     '<p class="hint">The archive could not be loaded just now. ' +
     '<a href="/archive">Open it directly</a>.</p>'; });
+
+// Hidden unless a scheduled re-scan has actually recorded a decision moving -- see
+// scanner/rescan.py. Same-decision verdict changes are filtered server-side, so every
+// row here is a caller-visible change: something an agent would now be told differently.
+fetch(API + '/evidence/changelog')
+  .then((r) => r.json())
+  .then((d) => {
+    const entries = d.entries || [];
+    const count = document.getElementById('changesCount');
+    if (count) count.textContent = entries.length;
+    if (!entries.length) return;
+    const box = document.getElementById('changelogBox');
+    const list = document.getElementById('changelogList');
+    entries.slice(0, 8).forEach((e) => {
+      const row = document.createElement('div');
+      row.className = 'changelog-row';
+      row.innerHTML =
+        '<span class="kind ' + e.kind + '">' + e.kind + '</span>' +
+        '<span class="dom"></span>' +
+        '<span class="move"></span>' +
+        '<span class="when"></span>';
+      row.querySelector('.dom').textContent = e.domain;
+      row.querySelector('.move').textContent = e.from + ' → ' + e.to;
+      row.querySelector('.when').textContent = relTime(e.observedAt);
+      list.appendChild(row);
+    });
+    box.hidden = false;
+  })
+  .catch(() => {});
 
 // The four figures above the grid, counted from the same array the grid draws.
 function renderStats(properties) {
