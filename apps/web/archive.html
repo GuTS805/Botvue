@@ -332,7 +332,17 @@ tr.detail-row:hover{background:none}
   <p><a href="/">Back to Botvue</a></p>
 </footer>
 
+<script src="https://cdn.jsdelivr.net/npm/lenis@1.1.14/dist/lenis.min.js"></script>
 <script>
+// Same inertial-scroll treatment as the homepage, so the two pages of one
+// product don't feel like they were built by different hands.
+(function smoothScroll(){
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches || typeof Lenis === 'undefined') return;
+  const lenis = new Lenis({duration: 1.05, easing: (t) => 1 - Math.pow(1 - t, 3)});
+  function raf(time) { lenis.raf(time); requestAnimationFrame(raf); }
+  requestAnimationFrame(raf);
+})();
+
 (function stickyHeader(){
   const el = document.querySelector('header');
   let on = false;

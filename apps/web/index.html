@@ -225,7 +225,11 @@ header.stuck{padding:9px 0;background:rgba(6,8,14,.72);
 }
 
 /* ── Hero ───────────────────────────────────────────────────────────────── */
-.hero{padding:74px 0 0;position:relative}
+.hero{padding:74px 0 0;position:relative;--mx:50%;--my:30%}
+.hero::before{content:'';position:absolute;z-index:0;inset:-8% -6%;pointer-events:none;
+  background:radial-gradient(480px 380px at var(--mx) var(--my), rgba(108,198,255,.09), transparent 70%);
+  transition:opacity .4s var(--ease)}
+@media (hover:none){.hero::before{display:none}}
 .eyebrow{display:inline-flex;align-items:center;gap:9px;font-size:.755rem;font-weight:600;
   letter-spacing:.12em;text-transform:uppercase;color:var(--ink-2);padding:7px 15px;
   border:1px solid var(--rule);border-radius:99px;background:rgba(150,175,225,.045);
@@ -836,7 +840,7 @@ footer{padding:44px 0 60px;border-top:1px solid var(--rule-2);margin-top:0}
    </div>
   </div>
 
-  <section class="neq reveal" id="neq">
+  <section class="neq" id="neq">
     <div class="neq-line">
       <span class="ok">200 OK</span><span class="sign">&#8800;</span><span class="no">success</span>
     </div>
@@ -1230,6 +1234,9 @@ footer{padding:44px 0 60px;border-top:1px solid var(--rule-2);margin-top:0}
     rather than removed.</p>
 </footer>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lenis@1.1.14/dist/lenis.min.js"></script>
 <script>
 // The human panel's bars are drawn, not written, so the void beside it stays literally empty.
 (function drawHuman(){
@@ -1245,6 +1252,91 @@ footer{padding:44px 0 60px;border-top:1px solid var(--rule-2);margin-top:0}
 })();
 
 const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// Inertial scrolling, the one thing every premium scroll-driven page shares.
+// Falls back to native scroll silently if the CDN did not answer, and never
+// runs at all when the visitor asked for less motion.
+let lenis = null;
+if (!REDUCE && typeof Lenis !== 'undefined') {
+  lenis = new Lenis({duration: 1.05, easing: (t) => 1 - Math.pow(1 - t, 3)});
+  function raf(time) { lenis.raf(time); requestAnimationFrame(raf); }
+  requestAnimationFrame(raf);
+  if (typeof gsap !== 'undefined' && typeof ScrollTrigger !== 'undefined') {
+    lenis.on('scroll', ScrollTrigger.update);
+    gsap.ticker.add((time) => lenis.raf(time * 1000));
+    gsap.ticker.lagSmoothing(0);
+  }
+}
+
+// The strongest concept on the page, staged rather than just faded in: the
+// three words lock into place across the scroll distance of the section
+// itself, so the scrub — not a timer — is what drives "success" being struck
+// through. One cinematic moment, not a page full of them.
+if (!REDUCE && typeof gsap !== 'undefined' && typeof ScrollTrigger !== 'undefined') {
+  gsap.registerPlugin(ScrollTrigger);
+  const neq = document.getElementById('neq');
+  if (neq) {
+    const ok = neq.querySelector('.ok'), sign = neq.querySelector('.sign'),
+      no = neq.querySelector('.no'), cap = neq.querySelector('.neq-cap'),
+      chain = neq.querySelector('.neq-chain');
+    gsap.set([sign, no], {opacity: 0, y: 22});
+    gsap.set(ok, {scale: .82, opacity: 0});
+    gsap.set([cap, chain], {opacity: 0, y: 14});
+    gsap.timeline({scrollTrigger: {trigger: neq, start: 'top 75%', end: 'top 20%', scrub: .6}})
+      .to(ok, {scale: 1, opacity: 1, duration: .4, ease: 'none'})
+      .to(sign, {opacity: 1, y: 0, duration: .3, ease: 'none'})
+      .to(no, {opacity: 1, y: 0, duration: .3, ease: 'none'}, '<.1');
+    gsap.timeline({scrollTrigger: {trigger: neq, start: 'top 40%', end: 'top -5%', scrub: .6}})
+      .to(cap, {opacity: 1, y: 0, duration: .5, ease: 'none'})
+      .to(chain, {opacity: 1, y: 0, duration: .5, ease: 'none'}, '<.15');
+    // The strike under "success" is a CSS pseudo-element GSAP cannot tween directly --
+    // toggle the class the existing transition already keys off, timed to land after
+    // the word itself has appeared above.
+    ScrollTrigger.create({trigger: neq, start: 'top 35%', toggleClass: {targets: neq, className: 'in'}});
+  }
+} else {
+  const neq = document.getElementById('neq');
+  if (neq) neq.classList.add('in');
+}
+
+// A glow that leans toward the cursor in the hero only — a whole-page listener
+// would run a mousemove handler for content most visitors never point at.
+(function heroGlow(){
+  if (REDUCE) return;
+  const hero = document.querySelector('.hero');
+  if (!hero || matchMedia('(hover: none)').matches) return;
+  let raf = null, px = .5, py = .3;
+  hero.style.setProperty('--mx', '50%');
+  hero.style.setProperty('--my', '30%');
+  hero.addEventListener('pointermove', (e) => {
+    const r = hero.getBoundingClientRect();
+    px = (e.clientX - r.left) / r.width;
+    py = (e.clientY - r.top) / r.height;
+    if (raf) return;
+    raf = requestAnimationFrame(() => {
+      hero.style.setProperty('--mx', (px * 100).toFixed(1) + '%');
+      hero.style.setProperty('--my', (py * 100).toFixed(1) + '%');
+      raf = null;
+    });
+  });
+})();
+
+// A button that leans a few pixels toward the pointer, and lets go the moment
+// it leaves. GSAP's quickTo keeps this smooth without fighting the CSS hover
+// transform already on .btn.
+(function magneticButtons(){
+  if (REDUCE || typeof gsap === 'undefined') return;
+  document.querySelectorAll('.btn-solid, .header-cta').forEach((btn) => {
+    const xTo = gsap.quickTo(btn, 'x', {duration: .5, ease: 'power3'});
+    const yTo = gsap.quickTo(btn, 'y', {duration: .5, ease: 'power3'});
+    btn.addEventListener('pointermove', (e) => {
+      const r = btn.getBoundingClientRect();
+      xTo((e.clientX - r.left - r.width / 2) * .28);
+      yTo((e.clientY - r.top - r.height / 2) * .28);
+    });
+    btn.addEventListener('pointerleave', () => { xTo(0); yTo(0); });
+  });
+})();
 
 // Sections arrive as they are reached. One observer, one class, no per-section
 // scripting — a page that animates itself section by section reads as a deck.
@@ -1635,7 +1727,8 @@ headerSearch.addEventListener('submit', (e) => {
   const v = headerInput.value.trim();
   if (!v) return;
   input.value = v;
-  document.getElementById('tool').scrollIntoView({behavior: 'smooth', block: 'start'});
+  const toolEl = document.getElementById('tool');
+  if (lenis) lenis.scrollTo(toolEl, {offset: -20}); else toolEl.scrollIntoView({behavior: 'smooth', block: 'start'});
   form.requestSubmit();
   headerInput.value = '';
 });
