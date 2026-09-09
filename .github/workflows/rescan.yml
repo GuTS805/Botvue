@@ -37,7 +37,12 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Re-fetch every property and diff against the last run
-        run: python -m scanner.rescan
+        # Gentler than the default: a shared-hosting CI IP hitting a dozen properties on
+        # the same CDN in one burst (many of these chains sit behind one vendor) reads as
+        # exactly the kind of traffic that CDN rate-limits -- the first run at the default
+        # concurrency produced a run of Hearst properties coming back unjudgeable all at
+        # once, not because anything about them changed. Lower concurrency, longer delay.
+        run: python -m scanner.rescan --workers 6 --delay 1.0
 
       - name: Commit the updated evidence, if anything changed
         run: |

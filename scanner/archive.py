@@ -59,7 +59,10 @@ def _grade_one(entry: dict) -> tuple[tuple[str, str], object]:
     return (entry["domain"], entry["url"]), grade(entry["domain"], entry["url"])
 
 
-def collect() -> dict:
+def dedupe_corpus() -> list[dict]:
+    """`build_chains() + build(400)`, one entry per (domain, url) -- the exact corpus this
+    project measures, so a caller grading it for a purpose other than the frozen archive
+    (rescan's diff, say) works from the identical set rather than a hand-rolled copy of it."""
     entries = build_chains() + build(400)
     seen: set[tuple] = set()
     deduped: list[dict] = []
@@ -69,13 +72,30 @@ def collect() -> dict:
             continue
         seen.add(key)
         deduped.append(e)
+    return deduped
 
-    # grade() is pure CPU (text diffing and fuzzy matching, no network) but there are
-    # hundreds of entries at roughly a second each. A thread pool does not help here --
-    # this is CPU-bound work under one GIL -- so this uses real processes instead. Order
-    # does not matter; `properties` is sorted below anyway.
+
+def grade_corpus(entries: list[dict]) -> dict[tuple[str, str], object]:
+    """Grades every entry once, in parallel. grade() is pure CPU (text diffing and fuzzy
+    matching, no network) but there are hundreds of entries at roughly a second each. A
+    thread pool does not help here -- this is CPU-bound work under one GIL -- so this uses
+    real processes instead. Split out so a caller that needs the grade for every entry, not
+    just the ones that end up as findings (rescan's diff), grades once rather than paying
+    for this pass twice."""
     with ProcessPoolExecutor() as pool:
-        graded = dict(pool.map(_grade_one, deduped, chunksize=4))
+        return dict(pool.map(_grade_one, entries, chunksize=4))
+
+
+def collect(
+    entries: list[dict] | None = None,
+    graded: dict[tuple[str, str], object] | None = None,
+) -> tuple[dict, dict[str, str]]:
+    """Builds the public manifest. Pass `entries`/`graded` when the caller already has
+    them (rescan.py grades the whole corpus for its own diff first) so this does not grade
+    the same ~570 entries a second time; omitted, it grades them itself, unchanged from
+    before for `python -m scanner.archive`."""
+    deduped = entries if entries is not None else dedupe_corpus()
+    graded = graded if graded is not None else grade_corpus(deduped)
 
     properties: list[dict] = []
     stub_bodies: dict[str, str] = {}
