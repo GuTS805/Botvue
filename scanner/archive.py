@@ -15,6 +15,7 @@ from __future__ import annotations
 import hashlib
 import json
 import time
+from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
 from .agents import BASELINE, CONTROL
@@ -49,19 +50,38 @@ def _agent_record(rec: dict) -> dict:
     }
 
 
+def _grade_one(entry: dict) -> tuple[tuple[str, str], object]:
+    """Module-level, not a lambda or closure -- a `ProcessPoolExecutor` worker has to be
+    able to pickle it to send it to a fresh interpreter, and only a plain importable
+    function qualifies. grade() is pure CPU (text diffing, fuzzy matching) with no shared
+    state to protect, which is exactly the case a process pool is for: threads share one
+    GIL and do not actually run this concurrently, processes do."""
+    return (entry["domain"], entry["url"]), grade(entry["domain"], entry["url"])
+
+
 def collect() -> dict:
     entries = build_chains() + build(400)
     seen: set[tuple] = set()
-    properties: list[dict] = []
-    stub_bodies: dict[str, str] = {}
-
+    deduped: list[dict] = []
     for e in entries:
         key = (e["domain"], e["url"])
         if key in seen:
             continue
         seen.add(key)
+        deduped.append(e)
 
-        v = grade(e["domain"], e["url"])
+    # grade() is pure CPU (text diffing and fuzzy matching, no network) but there are
+    # hundreds of entries at roughly a second each. A thread pool does not help here --
+    # this is CPU-bound work under one GIL -- so this uses real processes instead. Order
+    # does not matter; `properties` is sorted below anyway.
+    with ProcessPoolExecutor() as pool:
+        graded = dict(pool.map(_grade_one, deduped, chunksize=4))
+
+    properties: list[dict] = []
+    stub_bodies: dict[str, str] = {}
+
+    for e in deduped:
+        v = graded[(e["domain"], e["url"])]
         if v.verdict in UNJUDGEABLE or v.verdict == "clean":
             continue
 
