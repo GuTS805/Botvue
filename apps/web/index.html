@@ -1236,7 +1236,6 @@ footer{padding:44px 0 60px;border-top:1px solid var(--rule-2);margin-top:0}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/lenis@1.1.14/dist/lenis.min.js"></script>
 <script>
 // The human panel's bars are drawn, not written, so the void beside it stays literally empty.
 (function drawHuman(){
@@ -1253,25 +1252,13 @@ footer{padding:44px 0 60px;border-top:1px solid var(--rule-2);margin-top:0}
 
 const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-// Inertial scrolling, the one thing every premium scroll-driven page shares.
-// Falls back to native scroll silently if the CDN did not answer, and never
-// runs at all when the visitor asked for less motion.
-let lenis = null;
-if (!REDUCE && typeof Lenis !== 'undefined') {
-  lenis = new Lenis({duration: .8, easing: (t) => 1 - Math.pow(1 - t, 3)});
-  // Driven from exactly one clock. Feeding lenis.raf() from both a manual
-  // requestAnimationFrame loop and gsap.ticker at once desyncs its internal
-  // velocity tracking -- the visible symptom is scroll that lags well behind
-  // the wheel. GSAP's ticker is the only driver when it is present.
-  if (typeof gsap !== 'undefined' && typeof ScrollTrigger !== 'undefined') {
-    lenis.on('scroll', ScrollTrigger.update);
-    gsap.ticker.add((time) => lenis.raf(time * 1000));
-    gsap.ticker.lagSmoothing(0);
-  } else {
-    function raf(time) { lenis.raf(time); requestAnimationFrame(raf); }
-    requestAnimationFrame(raf);
-  }
-}
+// Tried Lenis for inertial scroll and pulled it back out: on top of this
+// page's background layers (blurred auras, a fixed grid, backdrop-filter on
+// the header and several cards), its per-frame scroll interception read as
+// lag rather than polish. Native scroll -- already smoothed via CSS
+// `scroll-behavior:smooth` -- plus ScrollTrigger reading the real scrollbar
+// is the version that stays responsive.
+const lenis = null;
 
 // The strongest concept on the page, staged rather than just faded in: the
 // three words lock into place across the scroll distance of the section
