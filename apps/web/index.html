@@ -1258,13 +1258,18 @@ const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
 // runs at all when the visitor asked for less motion.
 let lenis = null;
 if (!REDUCE && typeof Lenis !== 'undefined') {
-  lenis = new Lenis({duration: 1.05, easing: (t) => 1 - Math.pow(1 - t, 3)});
-  function raf(time) { lenis.raf(time); requestAnimationFrame(raf); }
-  requestAnimationFrame(raf);
+  lenis = new Lenis({duration: .8, easing: (t) => 1 - Math.pow(1 - t, 3)});
+  // Driven from exactly one clock. Feeding lenis.raf() from both a manual
+  // requestAnimationFrame loop and gsap.ticker at once desyncs its internal
+  // velocity tracking -- the visible symptom is scroll that lags well behind
+  // the wheel. GSAP's ticker is the only driver when it is present.
   if (typeof gsap !== 'undefined' && typeof ScrollTrigger !== 'undefined') {
     lenis.on('scroll', ScrollTrigger.update);
     gsap.ticker.add((time) => lenis.raf(time * 1000));
     gsap.ticker.lagSmoothing(0);
+  } else {
+    function raf(time) { lenis.raf(time); requestAnimationFrame(raf); }
+    requestAnimationFrame(raf);
   }
 }
 
