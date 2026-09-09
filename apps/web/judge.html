@@ -1,0 +1,442 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#06080e">
+<title>Botvue — the 35-second version</title>
+<meta name="description" content="A self-driving walkthrough of Botvue: every figure shown is fetched live from the same endpoints the real site uses, not typed into a slide.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2306080e'/%3E%3Crect x='6' y='9' width='9' height='14' rx='2' fill='%233ddc97'/%3E%3Crect x='18' y='9' width='9' height='14' rx='2' fill='none' stroke='%23ff4d6a' stroke-width='1.6'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ground:#06080e; --surface:#0e1420; --surface-2:#121a29;
+  --ink:#e9eef8; --ink-2:#9aa7bf; --ink-3:#66738c;
+  --rule:rgba(150,175,225,.14); --rule-2:rgba(150,175,225,.24);
+  --received:#3ddc97; --absent:#5c6b85; --lie:#ff4d6a; --honest:#5aa2ff; --warn:#f5b544;
+  --accent:#6cc6ff; --violet:#8b7bf0;
+  --ease:cubic-bezier(.22,.72,.28,1);
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;overflow:hidden;background:var(--ground);color:var(--ink);
+  font-family:Inter,system-ui,-apple-system,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+.m{font-family:"JetBrains Mono",ui-monospace,monospace}
+
+/* The same field the rest of the site stands on -- this page is a different shape,
+   not a different product. */
+.field{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.field .grid{position:absolute;inset:-10%;
+  background-image:
+    linear-gradient(to right, rgba(150,175,225,.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(150,175,225,.05) 1px, transparent 1px);
+  background-size:52px 52px;
+  -webkit-mask-image:radial-gradient(120% 80% at 50% 0%, #000 8%, transparent 74%);
+  mask-image:radial-gradient(120% 80% at 50% 0%, #000 8%, transparent 74%);
+  animation:drift 34s linear infinite}
+@keyframes drift{to{transform:translate3d(0,52px,0)}}
+.field .aura{position:absolute;border-radius:50%;filter:blur(100px);opacity:.5}
+.field .a{width:900px;height:640px;top:-320px;right:-200px;
+  background:radial-gradient(circle, rgba(90,162,255,.28), transparent 66%)}
+.field .b{width:740px;height:540px;bottom:-300px;left:-220px;
+  background:radial-gradient(circle, rgba(139,123,240,.20), transparent 66%)}
+@media (prefers-reduced-motion:reduce){.field .grid{animation:none}}
+
+/* Progress: one segment per slide, filling left to right. This is the only thing on
+   the page a skimming viewer needs in order to know how much is left. */
+.progress{position:fixed;top:0;left:0;right:0;z-index:10;display:flex;gap:6px;
+  padding:16px 20px 0}
+.progress i{flex:1;height:3px;border-radius:99px;background:rgba(150,175,225,.16);
+  overflow:hidden;position:relative;display:block}
+.progress i b{position:absolute;inset:0;width:0%;background:linear-gradient(90deg,var(--accent),var(--violet));
+  display:block;border-radius:99px}
+.progress i.done b{width:100%;transition:none}
+.progress i.live b{transition:width linear}
+
+.top{position:fixed;top:20px;right:20px;z-index:10;display:flex;align-items:center;gap:10px}
+.brand{display:flex;align-items:center;gap:9px;font-family:"Space Grotesk",sans-serif;
+  font-weight:700;font-size:.95rem;color:#fff}
+.brand svg{width:20px;height:20px}
+.ctl{font:inherit;font-size:.76rem;color:var(--ink-3);background:rgba(150,175,225,.06);
+  border:1px solid var(--rule);border-radius:8px;padding:6px 12px;cursor:pointer;
+  font-family:"JetBrains Mono",monospace;transition:color .2s,border-color .2s}
+.ctl:hover{color:#fff;border-color:var(--rule-2)}
+
+.stage{position:relative;z-index:1;height:100%;display:flex;align-items:center;
+  justify-content:center;padding:80px 32px 48px}
+.slide{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  padding:80px 32px 48px;opacity:0;pointer-events:none;
+  transition:opacity .5s var(--ease)}
+.slide.on{opacity:1;pointer-events:auto}
+.inner{max-width:760px;width:100%;text-align:center}
+
+.eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:.72rem;font-weight:600;
+  letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);padding:6px 14px;
+  border:1px solid var(--rule);border-radius:99px;margin-bottom:22px;font-family:"JetBrains Mono",monospace}
+.eyebrow i{width:6px;height:6px;border-radius:99px;background:var(--received);display:block}
+
+h1{font-family:"Space Grotesk",sans-serif;font-weight:700;letter-spacing:-.04em;
+  font-size:clamp(2rem,5vw,3.4rem);line-height:1.05;margin:0 0 18px;color:#fff}
+h1 .accent{background:linear-gradient(176deg,var(--accent),var(--violet));
+  -webkit-background-clip:text;background-clip:text;color:transparent}
+p.lede{font-size:1.08rem;color:var(--ink-2);line-height:1.6;margin:0 auto;max-width:56ch}
+
+/* Slide 3: the exhibit, identical treatment to the homepage hero */
+.exhibit{text-align:left;border:1px solid var(--rule);border-radius:16px;overflow:hidden;
+  background:linear-gradient(180deg,var(--surface-2),var(--surface));
+  box-shadow:0 40px 90px -40px rgba(0,0,0,1);margin-top:8px}
+.exhibit-bar{display:flex;align-items:center;gap:12px;padding:13px 20px;
+  border-bottom:1px solid var(--rule);background:rgba(0,0,0,.28)}
+.chip{font-family:"JetBrains Mono",monospace;font-size:.78rem;font-weight:700;padding:4px 10px;
+  border-radius:6px;color:var(--lie);background:rgba(255,77,106,.12);
+  box-shadow:inset 0 0 0 1px rgba(255,77,106,.3)}
+.req{font-family:"JetBrains Mono",monospace;font-size:.76rem;color:var(--ink-3)}
+.exhibit-body{padding:26px 20px}
+.exhibit-body q{display:block;quotes:none;font-family:"JetBrains Mono",monospace;
+  font-size:1.05rem;line-height:1.55;color:#fff}
+.exhibit-foot{display:flex;gap:20px;flex-wrap:wrap;padding:13px 20px;
+  border-top:1px solid var(--rule);font-size:.78rem;color:var(--ink-3);background:rgba(0,0,0,.2)}
+.exhibit-foot b{color:var(--ink);font-weight:600}
+
+/* Slide 4: the thesis */
+.neq{font-family:"Space Grotesk",sans-serif;font-weight:700;letter-spacing:-.05em;
+  font-size:clamp(2.4rem,7vw,4.6rem);display:flex;align-items:center;justify-content:center;
+  gap:clamp(10px,2.4vw,28px);flex-wrap:wrap;margin-bottom:20px}
+.neq .ok{color:var(--lie)}
+.neq .sign{color:var(--ink-3);font-weight:400}
+.neq .no{color:#fff;position:relative}
+.neq .no::after{content:'';position:absolute;left:-2%;top:52%;height:.055em;width:104%;
+  background:linear-gradient(90deg,var(--lie),#fff);transform:scaleX(0);transform-origin:left;
+  transition:transform .8s var(--ease) .25s}
+.slide.on .neq .no::after{transform:scaleX(1)}
+
+/* Slide 5: scale, counted */
+.stats{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:26px}
+.stat{border:1px solid var(--rule);border-radius:12px;padding:18px 22px;min-width:140px;
+  background:linear-gradient(180deg,var(--surface-2),var(--surface))}
+.stat b{display:block;font-family:"Space Grotesk",sans-serif;font-size:2.1rem;font-weight:700;
+  color:#fff;letter-spacing:-.04em}
+.stat span{display:block;margin-top:4px;font-size:.76rem;color:var(--ink-3)}
+.stat.total b{background:linear-gradient(90deg,var(--accent),var(--violet));
+  -webkit-background-clip:text;background-clip:text;color:transparent}
+.stat.lie b{color:var(--lie)} .stat.honest b{color:var(--honest)} .stat.flag b{color:var(--warn)}
+
+/* Slide 2: the live catch */
+.catchlist{text-align:left;display:grid;gap:10px;margin-top:24px;max-width:640px;margin-inline:auto}
+.catchrow{display:flex;align-items:baseline;gap:12px;padding:12px 16px;border-radius:10px;
+  border:1px solid var(--rule-2);background:rgba(255,77,106,.05);flex-wrap:wrap}
+.catchrow.improved{background:rgba(61,220,151,.05)}
+.catchrow .kind{font-family:"JetBrains Mono",monospace;font-size:.7rem;font-weight:700;
+  padding:2px 9px;border-radius:6px;color:var(--lie);background:rgba(255,77,106,.14)}
+.catchrow.improved .kind{color:var(--received);background:rgba(61,220,151,.14)}
+.catchrow .dom{font-family:"JetBrains Mono",monospace;color:#fff;font-size:.88rem}
+.catchrow .move{font-family:"JetBrains Mono",monospace;font-size:.78rem;color:var(--ink-3)}
+
+/* Slide 6 */
+.pillar{text-align:left;max-width:600px;margin:22px auto 0;display:grid;gap:14px}
+.pillar div{border-left:2px solid var(--accent);padding-left:16px}
+.pillar p{margin:0;color:var(--ink-2);font-size:.96rem;line-height:1.55}
+.pillar b{color:#fff;display:block;margin-bottom:3px;font-size:.98rem}
+
+/* Slide 7: close */
+.ctas{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:26px}
+.btn{font:inherit;font-weight:600;font-size:.94rem;padding:13px 24px;border-radius:11px;
+  text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+.btn-solid{background:linear-gradient(180deg,#fff,#ccd8ea);color:#06080e}
+.btn-outline{border:1px solid var(--rule-2);color:var(--ink);background:rgba(150,175,225,.05)}
+.replay{margin-top:34px;font-size:.78rem;color:var(--ink-3)}
+.replay button{font:inherit;color:var(--accent);background:none;border:0;cursor:pointer;
+  text-decoration:underline;text-underline-offset:3px}
+
+@media (max-width:640px){
+  .stage,.slide{padding:74px 20px 40px}
+  .stats{gap:10px}
+  .stat{min-width:0;flex:1 1 130px;padding:14px 16px}
+}
+</style>
+</head>
+<body>
+
+<div class="field" aria-hidden="true"><div class="grid"></div><div class="aura a"></div><div class="aura b"></div></div>
+
+<div class="progress" id="progress"></div>
+
+<div class="top">
+  <div class="brand">
+    <svg viewBox="0 0 32 32" aria-hidden="true">
+      <rect width="32" height="32" rx="7" fill="#0e1420"/>
+      <rect width="32" height="32" rx="7" fill="none" stroke="rgba(150,175,225,.25)"/>
+      <rect x="6" y="9" width="9" height="14" rx="2" fill="#3ddc97"/>
+      <rect x="18" y="9" width="9" height="14" rx="2" fill="none" stroke="#ff4d6a" stroke-width="1.6"/>
+    </svg>
+    Botvue
+  </div>
+  <button class="ctl" id="pauseBtn" type="button" aria-label="Pause">Pause</button>
+  <a class="ctl" href="/" style="text-decoration:none">Full site</a>
+</div>
+
+<main class="stage">
+
+  <section class="slide" data-slide>
+    <div class="inner">
+      <span class="eyebrow"><i></i> THE 35-SECOND VERSION</span>
+      <h1>See what the <span class="accent">bots</span> see.</h1>
+      <p class="lede">A website can hand a person the article and hand an AI agent nothing —
+        and report success to both. Every figure on the next few slides is fetched live,
+        from the same endpoints the real site uses.</p>
+    </div>
+  </section>
+
+  <section class="slide" data-slide>
+    <div class="inner">
+      <span class="eyebrow"><i></i> CAUGHT AUTOMATICALLY</span>
+      <h1>Nobody ran this check.</h1>
+      <p class="lede" id="catchLede">Loading the live changelog…</p>
+      <div class="catchlist" id="catchList"></div>
+    </div>
+  </section>
+
+  <section class="slide" data-slide>
+    <div class="inner">
+      <span class="eyebrow"><i></i> THE FINDING, VERBATIM</span>
+      <h1>The whole response body.</h1>
+      <div class="exhibit">
+        <div class="exhibit-bar">
+          <span class="chip">200 OK</span>
+          <span class="req">GET / &#183; User-Agent: GPTBot/1.1</span>
+        </div>
+        <div class="exhibit-body">
+          <q>You are not authorized to access this content without a valid TollBit Token.</q>
+        </div>
+        <div class="exhibit-foot">
+          <span><b>161</b> bytes, entire body</span>
+          <span>answered <b>200</b> by <b>14</b> properties</span>
+          <span class="m">sha256 ad3a87823990&#8230;</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" data-slide>
+    <div class="inner">
+      <div class="neq"><span class="ok">200 OK</span><span class="sign">&#8800;</span><span class="no">success</span></div>
+      <p class="lede">An agent reads the status line before it reads the page. Told it
+        succeeded, it goes on to summarise a page it never actually read.</p>
+    </div>
+  </section>
+
+  <section class="slide" data-slide>
+    <div class="inner">
+      <span class="eyebrow"><i></i> NOT ONE SITE</span>
+      <h1>Measured at scale, kept current.</h1>
+      <p class="lede" id="statsLede">Loading the live archive&#8230;</p>
+      <div class="stats" id="statsBox"></div>
+    </div>
+  </section>
+
+  <section class="slide" data-slide>
+    <div class="inner">
+      <span class="eyebrow"><i></i> EVIDENCE, NOT ASSERTIONS</span>
+      <h1>Nobody has to take our word for it.</h1>
+      <div class="pillar">
+        <div><b>No submit key.</b><p>Every finding is written to a public Hedera consensus
+          topic anyone can append to — including a publisher who disagrees with a result.</p></div>
+        <div><b>Every claim is a hash.</b><p>Fetch the same URL with the same user-agent,
+          hash the body, compare. If it no longer matches, that is the point.</p></div>
+        <div><b>Corrected in public.</b><p>When our own monitoring reported a false result
+          from a rate-limited fetch, we shipped the fix the same day rather than let it
+          stand — the standard this project holds everyone else to.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" data-slide>
+    <div class="inner">
+      <span class="eyebrow"><i></i> TRY IT</span>
+      <h1>Check what your site actually serves.</h1>
+      <p class="lede">Six fetches, one URL, free, no sign-in.</p>
+      <div class="ctas">
+        <a class="btn btn-solid" href="/#tool">Check a page &#8594;</a>
+        <a class="btn btn-outline" href="/">Explore the full site</a>
+      </div>
+      <p class="replay">botvue.onrender.com &#183; <button type="button" id="replayBtn">play again</button></p>
+    </div>
+  </section>
+
+</main>
+
+<script>
+const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const DURATIONS = [4200, 6200, 5200, 4600, 5400, 6400, 6000]; // ms per slide
+const slides = [...document.querySelectorAll('[data-slide]')];
+const progressBox = document.getElementById('progress');
+slides.forEach(() => {
+  const i = document.createElement('i');
+  i.innerHTML = '<b></b>';
+  progressBox.appendChild(i);
+});
+const segs = [...progressBox.children];
+
+let idx = -1;
+let paused = false;
+let timer = null;
+let segStart = 0;
+let segRemaining = 0;
+
+function showSlide(i) {
+  slides.forEach((s, n) => s.classList.toggle('on', n === i));
+  segs.forEach((s, n) => {
+    s.classList.toggle('done', n < i);
+    s.classList.toggle('live', n === i);
+    if (n === i) {
+      const bar = s.querySelector('b');
+      bar.style.transition = 'none';
+      bar.style.width = '0%';
+      // Force a reflow so the transition below actually animates from 0.
+      void bar.offsetWidth;
+      bar.style.transition = REDUCE ? 'none' : 'width ' + (DURATIONS[i] / 1000) + 's linear';
+      bar.style.width = '100%';
+    } else if (n < i) {
+      s.querySelector('b').style.transition = 'none';
+      s.querySelector('b').style.width = '100%';
+    } else {
+      s.querySelector('b').style.transition = 'none';
+      s.querySelector('b').style.width = '0%';
+    }
+  });
+}
+
+function next() {
+  idx += 1;
+  if (idx >= slides.length) {
+    idx = slides.length - 1;
+    clearTimeout(timer);
+    return; // hold on the closing slide until "play again"
+  }
+  showSlide(idx);
+  segRemaining = DURATIONS[idx];
+  segStart = Date.now();
+  if (!paused) timer = setTimeout(next, segRemaining);
+}
+
+function restart() {
+  idx = -1;
+  paused = false;
+  document.getElementById('pauseBtn').textContent = 'Pause';
+  next();
+}
+
+document.getElementById('pauseBtn').addEventListener('click', () => {
+  paused = !paused;
+  document.getElementById('pauseBtn').textContent = paused ? 'Play' : 'Pause';
+  if (paused) {
+    clearTimeout(timer);
+    segRemaining -= Date.now() - segStart;
+    const bar = segs[idx].querySelector('b');
+    bar.style.transition = 'none';
+    const cs = getComputedStyle(bar).width;
+    bar.style.width = cs; // freeze at current width
+  } else {
+    segStart = Date.now();
+    const bar = segs[idx].querySelector('b');
+    const doneFrac = 1 - Math.max(segRemaining, 0) / DURATIONS[idx];
+    void bar.offsetWidth;
+    bar.style.transition = REDUCE ? 'none' : 'width ' + Math.max(segRemaining, 0) / 1000 + 's linear';
+    bar.style.width = '100%';
+    timer = setTimeout(next, Math.max(segRemaining, 0));
+  }
+});
+
+document.getElementById('replayBtn').addEventListener('click', restart);
+
+document.addEventListener('keydown', (e) => {
+  if (e.code === 'Space') { e.preventDefault(); document.getElementById('pauseBtn').click(); }
+  if (e.key === 'ArrowRight') { clearTimeout(timer); next(); }
+  if (e.key === 'ArrowLeft' && idx > 0) { clearTimeout(timer); idx -= 2; next(); }
+});
+
+// A viewer who prefers reduced motion still gets the same pacing -- auto-advance is
+// content pagination, not decorative animation -- but the progress fill jumps rather
+// than sweeping, and the "success" strike-through does not draw itself.
+if (REDUCE) document.body.classList.add('reduce');
+
+// Real data, fetched once, before the reel starts. If either call fails, that slide
+// says so plainly rather than showing a number nobody measured.
+const API = location.origin;
+
+function relTime(iso) {
+  if (!iso) return '';
+  const mins = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+  if (mins < 60) return mins + 'm ago';
+  const hrs = Math.round(mins / 60);
+  if (hrs < 48) return hrs + 'h ago';
+  return Math.round(hrs / 24) + 'd ago';
+}
+
+const loadCatch = fetch(API + '/evidence/changelog')
+  .then((r) => r.json())
+  .then((d) => {
+    const entries = (d.entries || []).slice(0, 3);
+    const lede = document.getElementById('catchLede');
+    const list = document.getElementById('catchList');
+    if (!entries.length) {
+      lede.textContent = 'The archive re-checks itself daily. No decisions have moved ' +
+        'since the last run — right now, that is the finding.';
+      return;
+    }
+    lede.textContent = 'The corpus re-fetches itself daily. These decisions moved on ' +
+      'their own, with nobody watching:';
+    entries.forEach((e) => {
+      const row = document.createElement('div');
+      row.className = 'catchrow ' + e.kind;
+      row.innerHTML = '<span class="kind"></span><span class="dom"></span><span class="move"></span>';
+      row.querySelector('.kind').textContent = e.kind;
+      row.querySelector('.dom').textContent = e.domain;
+      row.querySelector('.move').textContent = e.from + ' → ' + e.to + ' · ' + relTime(e.observedAt);
+      list.appendChild(row);
+    });
+  })
+  .catch(() => {
+    document.getElementById('catchLede').textContent =
+      'Live changelog unavailable right now — see /evidence/changelog on the full site.';
+  });
+
+const loadStats = fetch(API + '/evidence/all')
+  .then((r) => r.json())
+  .then((d) => {
+    const props = d.properties || [];
+    document.getElementById('statsLede').textContent =
+      'Every property below was fetched as a browser, as Googlebot, and as four AI ' +
+      'crawlers, then compared — re-observed daily, not captured once.';
+    const counts = [
+      ['total', props.length, 'properties measured'],
+      ['lie', props.filter((p) => p.decision === 'block').length, 'answered success, sent nothing'],
+      ['honest', props.filter((p) => p.verdict === 'refused').length, 'refused openly, with a 4xx'],
+      ['flag', props.filter((p) => p.decision === 'flag').length, 'something differed, not acted on'],
+    ];
+    const box = document.getElementById('statsBox');
+    counts.forEach(([cls, n, label]) => {
+      const el = document.createElement('div');
+      el.className = 'stat ' + cls;
+      el.innerHTML = '<b></b><span></span>';
+      el.querySelector('b').textContent = n;
+      el.querySelector('span').textContent = label;
+      box.appendChild(el);
+    });
+  })
+  .catch(() => {
+    document.getElementById('statsLede').textContent =
+      'Live archive unavailable right now — see /evidence/all on the full site.';
+  });
+
+Promise.allSettled([loadCatch, loadStats]).then(() => next());
+</script>
+</body>
+</html>

@@ -244,6 +244,14 @@ def archive_page() -> FileResponse:
     return FileResponse(WEB / "archive.html")
 
 
+@app.get("/judge", include_in_schema=False)
+def judge_page() -> FileResponse:
+    # A self-driving walkthrough for someone skimming many submissions: it advances on
+    # its own, and every figure it shows is fetched from the same endpoints a person
+    # clicking around the real page would hit -- not a slide deck with numbers typed in.
+    return FileResponse(WEB / "judge.html")
+
+
 @app.get("/og.png", include_in_schema=False)
 def social_card() -> FileResponse:
     # Referenced by absolute URL from the page's og:image, so it has to be reachable
