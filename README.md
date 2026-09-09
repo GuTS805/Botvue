@@ -274,7 +274,7 @@ payment rail on top of it rather than being handed a pre-built gate.
 the same code rather than reimplementing it." [`scanner/mcp_server.py`](scanner/mcp_server.py)
 is that claim, made true rather than left as a comment. It wraps the exact same
 `scanner.service.check` the HTTP gateway calls — same fetch, same diff, same classifier, same
-verdict — behind two MCP tools instead of a REST route:
+verdict — behind three MCP tools instead of a REST route:
 
 ```bash
 python -m scanner.mcp_server
@@ -285,6 +285,9 @@ check_url(url, fresh=false)  — the check itself: decision, verdict, explanatio
                                 word ratios, a SHA-256 of every response body, and — when the
                                 verdict rests on specific text — the sentences themselves,
                                 quoted, not described.
+fetch_url(url)                — a fetch-tool replacement: returns page content only when it
+                                matches what a browser sees, withholding it with a reason
+                                otherwise. See "A third adapter" below.
 list_agents()                 — the exact user-agent strings sent, so a result can be
                                 reproduced with a plain curl rather than taken on trust.
 ```
@@ -296,6 +299,30 @@ tool into unbounded, uncontrolled evidence — the same reasoning behind the web
 free `/check/preview` path, which this mirrors. This is a separate process from the HTTP
 gateway (`mcp` is not a dependency of `gateway.py`, and is not installed in the deployed
 service), so it does not add a stdio server to a web dyno that has no business running one.
+
+---
+
+## A third adapter — a fetch-tool replacement
+
+Every fetch-tool MCP server — `agentfetch`, `web-retrieval-mcp`, the built-in `WebFetch` —
+competes on reliability: did the page load, was it parsed cleanly. None of them ask whether
+what loaded is what a human would see.
+
+`fetch_url` in [`scanner/mcp_server.py`](scanner/mcp_server.py) answers that question first,
+then returns content only when it's clean:
+
+```python
+fetch_url("https://www.houstonchronicle.com/")
+# → {"status": "blocked", "reason": "...", "content": None, "warning": "..."}
+
+fetch_url("https://www.elle.com/")
+# → {"status": "clean", "content": "<the actual article text>", "warning": None}
+```
+
+Point any MCP client's fetch tool at this instead of a generic one, and it silently gets the
+same authenticity check every other verdict in this project goes through: content is withheld,
+not silently handed back, on the same `block`/`flag`/`pass` decision the web page's own checker
+uses.
 
 ---
 

@@ -104,6 +104,7 @@ class CheckResult:
     samples: list = field(default_factory=list)
     attestation: dict = field(default_factory=dict)
     elapsed_ms: int = 0
+    browser_content: str | None = None
 
     @property
     def is_finding(self) -> bool:
@@ -166,4 +167,5 @@ def check(
         samples=verdict.samples,
         attestation=receipt,
         elapsed_ms=int((time.perf_counter() - started) * 1000),
+        browser_content=verdict.browser_content or None,
     )

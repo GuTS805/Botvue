@@ -80,6 +80,63 @@ def check_url(url: str, fresh: bool = False) -> dict:
 
 
 @mcp.tool()
+def fetch_url(url: str) -> dict:
+    """Drop-in replacement for a generic fetch tool. Returns page content only when it
+    matches what a human browser would see.
+
+    Every other fetch-tool MCP server competes on reliability -- did the page load, was
+    it parsed cleanly. None of them ask whether what loaded is what a human would see.
+    This one checks that first: if AI crawlers receive different content than a browser
+    (soft-blocked, substituted, or carrying machine-only text), content is withheld and a
+    warning explains why, instead of silently handing back a page that was never really
+    served to an agent.
+
+    Point an MCP client's fetch tool at this instead of a generic one, and every read
+    gets the same authenticity check every finding in this project goes through.
+    """
+    target, problem = normalise_url(url)
+    if problem:
+        return {"status": "error", "reason": problem, "content": None, "warning": None}
+
+    result = check(target, attestor=NullAttestor())
+    if result.verdict in ("baseline-failed", "no-data"):
+        return {
+            "status": "error",
+            "reason": "Could not fetch this page as a browser, so there is nothing to "
+                      "compare against.",
+            "content": None,
+            "warning": None,
+        }
+
+    if result.decision == "block":
+        return {
+            "status": "blocked",
+            "reason": result.explanation,
+            "verdict": result.verdict,
+            "content": None,
+            "warning": "This page returns different content to AI crawlers than to "
+                       "browsers. Content withheld -- see 'reason'.",
+        }
+
+    if result.decision == "flag":
+        return {
+            "status": "flagged",
+            "reason": result.explanation,
+            "verdict": result.verdict,
+            "content": result.browser_content,
+            "warning": "Some content on this page was written for machines only.",
+        }
+
+    return {
+        "status": "clean",
+        "reason": None,
+        "verdict": result.verdict,
+        "content": result.browser_content,
+        "warning": None,
+    }
+
+
+@mcp.tool()
 def list_agents() -> dict:
     """The exact user-agent strings this service sends, so a finding can be reproduced
     with a plain curl or fetch rather than taken on trust."""

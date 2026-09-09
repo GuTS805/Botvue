@@ -90,6 +90,7 @@ class Verdict:
     soft_blocked: list = field(default_factory=list)
     substituted: list = field(default_factory=list)
     samples: list = field(default_factory=list)
+    browser_content: str = ""
 
     @property
     def is_finding(self) -> bool:
@@ -150,6 +151,7 @@ def grade(domain: str, url: str | None = None) -> Verdict:
     base_hay = haystack(base["body"])
     base_words = len(base_hay.split())
     v.baseline_words = base_words
+    v.browser_content = base_hay
     if base_words < MIN_BASELINE_WORDS:
         v.verdict = "thin"
         v.reason = f"baseline carries only {base_words} words; not judgeable"
