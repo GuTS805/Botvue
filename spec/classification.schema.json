@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://botvue.onrender.com/spec/classification.schema.json",
+  "title": "Botvue crawler-only content classification",
+  "version": "1.0.0",
+  "description": "The taxonomy scanner/classify.py sorts a machine-only content block into. Reference implementation: https://github.com/GuTS805/Botvue/blob/main/scanner/classify.py. Published so another project measuring the same failure class -- content an AI crawler receives that a browser does not -- can adopt the same five levels rather than inventing its own, and so a finding here can be described in a vocabulary that means the same thing outside this repo.",
+  "type": "object",
+  "required": ["classification", "reason"],
+  "properties": {
+    "classification": {
+      "$ref": "#/$defs/Classification"
+    },
+    "reason": {
+      "type": "string",
+      "description": "Why this block was placed at this level -- the matched pattern or structural rule, truncated. Not free text: the reference implementation always produces one of a small, enumerable set of reasons per level, so a caller can rely on its shape even without the source."
+    }
+  },
+  "$defs": {
+    "Classification": {
+      "type": "string",
+      "description": "Ordered by severity, low to high. A caller comparing two findings should treat this as an ordinal, not just a label: PROMPT_INJECTION always outranks PROMOTIONAL, regardless of which fired first.",
+      "oneOf": [
+        {
+          "const": "COSMETIC",
+          "title": "Cosmetic",
+          "description": "Structural residue of a different rendering -- Markdown frontmatter, a heading marker, a metadata key-value line, markup that survived text extraction. Present because the format differs, not because the content does. Never material to a finding on its own."
+        },
+        {
+          "const": "MACHINE_ONLY",
+          "title": "Machine-only",
+          "description": "Substantive prose served only to machines, carrying no promotional or instructional marker. Reporting it as advertising or manipulation would assert an intent the classifier cannot observe from text alone, so it is named for what it structurally is and nothing more."
+        },
+        {
+          "const": "PROMOTIONAL",
+          "title": "Promotional",
+          "description": "Carries an explicit commercial marker -- 'sponsored', 'in partnership with', 'advertorial' and similar -- that a browser's version of the page does not."
+        },
+        {
+          "const": "POLICY_VIOLATION",
+          "title": "Policy violation",
+          "description": "Reserved for content that violates a stated platform or publisher policy in a way distinct from an injection attempt. Defined in the reference implementation's severity ordering; no rule in the current classifier assigns it yet -- there is no regression risk in adopting this level today, since it will never appear in output until a rule is added. Documented here rather than omitted, because a spec that quietly drops an unimplemented level is exactly the kind of undisclosed gap this project reports in other people's services."
+        },
+        {
+          "const": "PROMPT_INJECTION",
+          "title": "Prompt injection",
+          "description": "Text addressed to whoever -- or whatever -- is reading the block, not to a human visitor: an instruction to disregard prior guidance, a demand framed as a requirement ('you must...'), a payment or credential solicited from the reader, or a directive about how a summary should be written. Checked before every other level, so a block matching both an injection and a promotional pattern is reported as the injection. The highest severity a finding on this project can reach."
+        }
+      ]
+    }
+  }
+}

@@ -277,6 +277,21 @@ def demo_injection_page(user_agent: str | None = Header(default=None)) -> Respon
     return Response(content=html, media_type="text/html")
 
 
+@app.get(
+    "/spec/classification.schema.json",
+    summary="The crawler-only content taxonomy, as a JSON Schema.",
+    description="The five severities scanner/classify.py sorts a crawler-only block "
+                "into, published so another project measuring the same failure class "
+                "can adopt the same vocabulary rather than inventing its own. See "
+                "spec/README.md in the repository for how it's used and versioned.",
+)
+def classification_spec() -> FileResponse:
+    return FileResponse(
+        Path(__file__).resolve().parents[1] / "spec" / "classification.schema.json",
+        media_type="application/schema+json",
+    )
+
+
 @app.get("/llms.txt", response_class=PlainTextResponse, include_in_schema=False)
 def llms_txt() -> str:
     # Served identically to every user-agent, which given the subject matter is the least

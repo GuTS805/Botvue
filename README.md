@@ -15,7 +15,7 @@ compares what came back.
 ## How a check flows through the system
 
 ```mermaid
-flowchart TD
+flowchart LR
     A1["Agent reads /openapi.json<br/>to find the check operation"] --> A2["POST /check, no payment"]
     A2 --> G2["402 — price, payTo,<br/>Blocky402's fee-payer account"]
     G2 --> A3["Agent signs a Hedera transfer<br/>as the paying account only"]
@@ -299,6 +299,27 @@ service), so it does not add a stdio server to a web dyno that has no business r
 
 ---
 
+## The taxonomy, as a spec
+
+A finding here is only as good as the vocabulary it's reported in. `scanner/classify.py`
+sorts crawler-only content into five severities — an ordinal, not a flag — and that
+ordering is what decides whether a difference gets reported at all: `grade.py` only marks a
+verdict when the worst block reaches `PROMOTIONAL` or above, precisely because "the text
+differs" and "the text differs *and carries a promotional or instructional marker*" are
+different claims, and only the second one holds up.
+
+That taxonomy is published as a JSON Schema — [`spec/classification.schema.json`](spec/classification.schema.json),
+served live at [`/spec/classification.schema.json`](https://botvue.onrender.com/spec/classification.schema.json)
+— so a different project measuring the same failure class (an AI crawler receiving content,
+or an instruction, a browser does not) can adopt the same five levels instead of inventing
+its own. One of them, `POLICY_VIOLATION`, is documented as reserved and currently unused —
+no rule in the classifier assigns it yet. It stays in the spec anyway: dropping an
+unimplemented level to make the taxonomy look more finished than it is would be the exact
+gap between declared and actual this project reports in other people's services. Full
+account of what's live, what isn't, and how to version against it: [`spec/README.md`](spec/README.md).
+
+---
+
 ## Limitations
 
 **Detecting *added* content is unreliable, and it does not drive decisions.** Measured
@@ -375,6 +396,7 @@ packages/
   chain/     Hedera consensus attestation, topic creation, mirror-node verify
   agent/     a demo agent that discovers, pays through Blocky402, and verifies
 evidence/    frozen observations with hashes, and the stub bodies verbatim
+spec/        the classification taxonomy as a JSON Schema, for another project to adopt
 ```
 
 Every response is cached to disk, so re-grading the whole corpus costs no requests — which
