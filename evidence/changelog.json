@@ -1,0 +1,191 @@
+[
+ {
+  "observedAt": "2026-09-09T08:41:40Z",
+  "domain": "bigrapidsnews.com",
+  "from": "soft-blocked",
+  "to": "unjudgeable",
+  "kind": "improved"
+ },
+ {
+  "observedAt": "2026-09-09T08:41:40Z",
+  "domain": "chron.com",
+  "from": "soft-blocked",
+  "to": "unjudgeable",
+  "kind": "improved"
+ },
+ {
+  "observedAt": "2026-09-09T08:41:40Z",
+  "domain": "ctpost.com",
+  "from": "soft-blocked",
+  "to": "unjudgeable",
+  "kind": "improved"
+ },
+ {
+  "observedAt": "2026-09-09T08:41:40Z",
+  "domain": "expressnews.com",
+  "from": "soft-blocked",
+  "to": "unjudgeable",
+  "kind": "improved"
+ },
+ {
+  "observedAt": "2026-09-09T08:41:40Z",
+  "domain": "greenwichtime.com",
+  "from": "soft-blocked",
+  "to": "unjudgeable",
+  "kind": "improved"
+ },
+ {
+  "observedAt": "2026-09-09T08:41:40Z",
+  "domain": "houstonchronicle.com",
+  "from": "soft-blocked",
+  "to": "unjudgeable",
+  "kind": "improved"
+ },
+ {
+  "observedAt": "2026-09-09T08:41:40Z",
+  "domain": "journalstar.com",
+  "from": "all-bots-differ",
+  "to": "soft-blocked",
+  "kind": "worsened"
+ },
+ {
+  "observedAt": "2026-09-09T08:41:40Z",
+  "domain": "lmtonline.com",
+  "from": "soft-blocked",
+  "to": "unjudgeable",
+  "kind": "improved"
+ },
+ {
+  "observedAt": "2026-09-09T08:41:40Z",
+  "domain": "manisteenews.com",
+  "from": "soft-blocked",
+  "to": "unjudgeable",
+  "kind": "improved"
+ },
+ {
+  "observedAt": "2026-09-09T08:41:40Z",
+  "domain": "middletownpress.com",
+  "from": "soft-blocked",
+  "to": "unjudgeable",
+  "kind": "improved"
+ },
+ {
+  "observedAt": "2026-09-09T08:41:40Z",
+  "domain": "mrt.com",
+  "from": "soft-blocked",
+  "to": "unjudgeable",
+  "kind": "improved"
+ },
+ {
+  "observedAt": "2026-09-09T08:41:40Z",
+  "domain": "mysanantonio.com",
+  "from": "soft-blocked",
+  "to": "unjudgeable",
+  "kind": "improved"
+ },
+ {
+  "observedAt": "2026-09-09T08:41:40Z",
+  "domain": "newstimes.com",
+  "from": "soft-blocked",
+  "to": "unjudgeable",
+  "kind": "improved"
+ },
+ {
+  "observedAt": "2026-09-09T08:41:40Z",
+  "domain": "nhregister.com",
+  "from": "soft-blocked",
+  "to": "unjudgeable",
+  "kind": "improved"
+ },
+ {
+  "observedAt": "2026-09-09T08:41:40Z",
+  "domain": "nike.com",
+  "from": "refused",
+  "to": "all-bots-differ",
+  "kind": "worsened"
+ },
+ {
+  "observedAt": "2026-09-09T08:41:40Z",
+  "domain": "ourmidland.com",
+  "from": "soft-blocked",
+  "to": "unjudgeable",
+  "kind": "improved"
+ },
+ {
+  "observedAt": "2026-09-09T08:41:40Z",
+  "domain": "pantagraph.com",
+  "from": "all-bots-differ",
+  "to": "soft-blocked",
+  "kind": "worsened"
+ },
+ {
+  "observedAt": "2026-09-09T08:41:40Z",
+  "domain": "registercitizen.com",
+  "from": "soft-blocked",
+  "to": "unjudgeable",
+  "kind": "improved"
+ },
+ {
+  "observedAt": "2026-09-09T08:41:40Z",
+  "domain": "seattlepi.com",
+  "from": "soft-blocked",
+  "to": "unjudgeable",
+  "kind": "improved"
+ },
+ {
+  "observedAt": "2026-09-09T08:41:40Z",
+  "domain": "sfchronicle.com",
+  "from": "soft-blocked",
+  "to": "unjudgeable",
+  "kind": "improved"
+ },
+ {
+  "observedAt": "2026-09-09T08:41:40Z",
+  "domain": "sfgate.com",
+  "from": "soft-blocked",
+  "to": "unjudgeable",
+  "kind": "improved"
+ },
+ {
+  "observedAt": "2026-09-09T08:41:40Z",
+  "domain": "stamfordadvocate.com",
+  "from": "soft-blocked",
+  "to": "unjudgeable",
+  "kind": "improved"
+ },
+ {
+  "observedAt": "2026-09-09T08:41:40Z",
+  "domain": "statesman.com",
+  "from": "soft-blocked",
+  "to": "unjudgeable",
+  "kind": "improved"
+ },
+ {
+  "observedAt": "2026-09-09T08:41:40Z",
+  "domain": "thehour.com",
+  "from": "soft-blocked",
+  "to": "unjudgeable",
+  "kind": "improved"
+ },
+ {
+  "observedAt": "2026-09-09T08:41:40Z",
+  "domain": "theintelligencer.com",
+  "from": "soft-blocked",
+  "to": "unjudgeable",
+  "kind": "improved"
+ },
+ {
+  "observedAt": "2026-09-09T08:41:40Z",
+  "domain": "thesouthern.com",
+  "from": "all-bots-differ",
+  "to": "clean",
+  "kind": "improved"
+ },
+ {
+  "observedAt": "2026-09-09T08:41:40Z",
+  "domain": "timesunion.com",
+  "from": "soft-blocked",
+  "to": "unjudgeable",
+  "kind": "improved"
+ }
+]
