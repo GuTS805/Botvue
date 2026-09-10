@@ -34,5 +34,6 @@ gw.log
 .playwright-mcp/
 *.png
 !apps/web/og.png
+!apps/web/logo-mark.png
 corpus/cache-*/
 evidence/manifest-*.json

@@ -259,6 +259,13 @@ def social_card() -> FileResponse:
     return FileResponse(WEB / "og.png", media_type="image/png")
 
 
+@app.get("/logo-mark.png", include_in_schema=False)
+def logo_mark() -> FileResponse:
+    # The brand mark used in both page headers and as the favicon -- one file, one route,
+    # so the two can never drift into two different icons.
+    return FileResponse(WEB / "logo-mark.png", media_type="image/png")
+
+
 @app.get("/terms", summary="What a paid call costs and how payment is verified.")
 def payment_terms() -> dict:
     return terms.challenge()

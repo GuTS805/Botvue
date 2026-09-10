@@ -20,7 +20,7 @@
 <meta name="twitter:title" content="Every property this scan touched.">
 <meta name="twitter:description" content="All 126 properties as observed: domain, verdict, and what each AI crawler received.">
 <meta name="twitter:image" content="https://botvue.onrender.com/og.png">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2306080e'/%3E%3Crect x='6' y='9' width='9' height='14' rx='2' fill='%233ddc97'/%3E%3Crect x='18' y='9' width='9' height='14' rx='2' fill='none' stroke='%23ff4d6a' stroke-width='1.6'/%3E%3C/svg%3E">
+<link rel="icon" type="image/png" href="/logo-mark.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -107,10 +107,9 @@ header.stuck{padding:10px 0;background:rgba(6,8,14,.72);
   backdrop-filter:blur(18px) saturate(160%);-webkit-backdrop-filter:blur(18px) saturate(160%);
   border-bottom-color:var(--rule-2)}
 .brand{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
-.mark{width:26px;height:26px;flex:none;border-radius:7px}
+.mark{width:40px;height:40px;flex:none;border-radius:7px;object-fit:cover;display:block}
 .brand b{font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:1.2rem;
   letter-spacing:-.03em;color:#fff}
-.brand .tag-line{font-size:.82rem;color:var(--ink-3)}
 .nav{display:flex;gap:2px;font-size:.885rem;flex-wrap:wrap}
 .nav a{color:var(--ink-2);text-decoration:none;padding:7px 14px;border-radius:99px;
   white-space:nowrap;transition:color .2s var(--ease), background .2s var(--ease)}
@@ -237,7 +236,6 @@ footer{border-top:1px solid var(--rule-2);padding:44px 0 66px;font-size:.86rem;
 footer a{color:var(--ink-3)}
 footer a:hover{color:var(--accent)}
 
-@media (max-width:900px){.brand .tag-line{display:none}}
 @media (max-width:780px){
   .stats{flex-direction:column}
   .search{flex:1 1 100%;margin-left:0}
@@ -279,13 +277,8 @@ tr.detail-row:hover{background:none}
 
 <header class="wrap">
   <div class="brand">
-    <svg class="mark" viewBox="0 0 32 32" aria-hidden="true">
-      <rect width="32" height="32" rx="7" fill="#0e1420"/>
-      <rect width="32" height="32" rx="7" fill="none" stroke="rgba(150,175,225,.22)"/>
-      <rect x="6" y="9" width="9" height="14" rx="2" fill="#3ddc97"/>
-      <rect x="18" y="9" width="9" height="14" rx="2" fill="none" stroke="#ff4d6a" stroke-width="1.6"/>
-    </svg>
-    <b>Botvue</b><span class="tag-line">see what the bots see</span>
+    <img class="mark" src="/logo-mark.png" alt="" width="40" height="40">
+    <b>Botvue</b>
     <nav class="nav">
       <a href="/">Home</a>
       <a href="/archive" aria-current="page">Archive</a>
