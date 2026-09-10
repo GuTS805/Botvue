@@ -277,7 +277,8 @@ is that claim, made true rather than left as a comment. It wraps the exact same
 verdict — behind three MCP tools instead of a REST route:
 
 ```bash
-python -m scanner.mcp_server
+.venv/Scripts/python -m pip install -r requirements-mcp.txt
+.venv/Scripts/python -m scanner.mcp_server
 ```
 
 ```

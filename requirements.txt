@@ -12,8 +12,3 @@ zstandard==0.25.0
 
 fastapi==0.141.1
 uvicorn[standard]==0.52.4
-
-# The MCP adapter (scanner/mcp_server.py). Deploys separately from the HTTP gateway --
-# a stdio server has no business inside a web dyno -- so it is not imported by gateway.py
-# and this dependency never reaches the deployed service.
-mcp==2.2.0

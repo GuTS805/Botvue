@@ -1,0 +1,6 @@
+# The MCP adapter (scanner/mcp_server.py) only -- not installed as part of requirements.txt.
+# A stdio server has no business inside a web dyno, and pip installing it there was, at
+# least once, the whole build's single point of failure for a package the deployed
+# service (gateway.py) never imports at runtime. Install this only if you're running
+# scanner/mcp_server.py locally.
+mcp==2.2.0
