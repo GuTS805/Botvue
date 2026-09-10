@@ -694,7 +694,29 @@ footer{padding:44px 0 60px;border-top:1px solid var(--rule-2);margin-top:0}
 .reveal[data-d="2"]{transition-delay:.18s}
 .reveal[data-d="3"]{transition-delay:.27s}
 
+/* ── The intro: the mark blinks, then walks itself into the header ────────
+   A splash covering the page while it settles, then handed off to the real
+   header mark it lands exactly on top of -- so the swap between the two
+   reads as one continuous piece rather than a cut. */
+#splash{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;
+  justify-content:center;background:var(--ground);
+  transition:opacity .6s var(--ease)}
+#splash.hide{opacity:0;pointer-events:none}
+.splash-mark{position:relative;width:clamp(92px,22vw,156px);
+  height:clamp(92px,22vw,156px);transform-origin:center center;
+  transition:transform .85s cubic-bezier(.7,0,.16,1);will-change:transform}
+.splash-img{width:100%;height:100%;display:block;border-radius:7px;object-fit:cover}
+.splash-pupil{position:absolute;left:56%;top:58%;width:17%;height:17%;
+  transform:translate(-50%,-50%) scaleY(1);border-radius:50%;
+  background:radial-gradient(circle at 34% 28%, #f2fbff, #6cc6ff 55%, #16314e 100%);
+  box-shadow:0 0 22px rgba(108,198,255,.85);
+  transition:transform .11s ease}
+.splash-pupil.blink{transform:translate(-50%,-50%) scaleY(.08)}
+body.splash-active header .mark{opacity:0}
+header .mark{transition:opacity .3s var(--ease)}
+
 @media (prefers-reduced-motion:reduce){
+  #splash{display:none}
   .reveal{opacity:1;transform:none;filter:none;transition:none}
   .field .grid,.field .aura,.field .dust,.field .scan,
   .fl-edge.live,.agent-strip .node.on i,.eyebrow i,.line{animation:none}
@@ -708,6 +730,13 @@ footer{padding:44px 0 60px;border-top:1px solid var(--rule-2);margin-top:0}
 </style>
 </head>
 <body>
+
+<div id="splash" role="presentation">
+  <div class="splash-mark" id="splashMark">
+    <img class="splash-img" src="/logo-mark.png" alt="">
+    <span class="splash-pupil" id="splashPupil"></span>
+  </div>
+</div>
 
 <!-- One observed network behind the whole page: a grid, two bodies of light,
      a slow drift, and a data stream at the threshold of visibility. All of it
@@ -1243,6 +1272,47 @@ footer{padding:44px 0 60px;border-top:1px solid var(--rule-2);margin-top:0}
 })();
 
 const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// The mark blinks twice, then shrinks and travels to sit exactly on top of the
+// real header mark -- which is what makes the handoff between the two read as
+// one piece landing, not a cut from a splash to a page.
+(function splash(){
+  const el = document.getElementById('splash');
+  if (REDUCE) { el.remove(); return; }
+
+  document.body.classList.add('splash-active');
+  const mark = document.getElementById('splashMark');
+  const pupil = document.getElementById('splashPupil');
+
+  function blink(times, done) {
+    let n = 0;
+    const step = () => {
+      pupil.classList.add('blink');
+      setTimeout(() => {
+        pupil.classList.remove('blink');
+        n += 1;
+        if (n < times) setTimeout(step, 240);
+        else setTimeout(done, 380);
+      }, 120);
+    };
+    step();
+  }
+
+  setTimeout(() => {
+    blink(2, () => {
+      const navMark = document.querySelector('header .mark');
+      const from = mark.getBoundingClientRect();
+      const to = navMark.getBoundingClientRect();
+      const scale = to.width / from.width;
+      const dx = (to.left + to.width / 2) - (from.left + from.width / 2);
+      const dy = (to.top + to.height / 2) - (from.top + from.height / 2);
+      mark.style.transform = `translate3d(${dx}px, ${dy}px, 0) scale(${scale})`;
+      document.body.classList.remove('splash-active');
+      el.classList.add('hide');
+      setTimeout(() => el.remove(), 700);
+    });
+  }, 450);
+})();
 
 // Tried Lenis for inertial scroll and pulled it back out: on top of this
 // page's background layers (blurred auras, a fixed grid, backdrop-filter on
