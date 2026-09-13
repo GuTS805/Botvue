@@ -1,0 +1,20 @@
+name: Keep Render awake
+
+# Render's free tier spins the service down after ~15 minutes idle, and the next
+# request pays a cold start -- exactly the wrong moment for that to happen if a
+# judge is the one making it. This pings /health, which does nothing but report
+# liveness: no evidence write, no re-scan, no side effect on the data the site
+# shows. Safe to leave running through judging, unlike the re-scan schedule.
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: GET /health
+        run: curl -sf --max-time 30 https://botvue.onrender.com/health
