@@ -7,8 +7,6 @@ name: Keep Render awake
 # shows. Safe to leave running through judging, unlike the re-scan schedule.
 
 on:
-  schedule:
-    - cron: "*/10 * * * *"
   workflow_dispatch: {}
 
 jobs:
